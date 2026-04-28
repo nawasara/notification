@@ -100,16 +100,16 @@
 
             <div>
                 <x-nawasara-ui::form.label value="Subject" />
-                <x-nawasara-ui::form.input wire:model="formSubject" placeholder="Welcome {{ '{{' }} \$name {{ '}}' }}" useError errorVariable="formSubject" />
+                <x-nawasara-ui::form.input wire:model="formSubject" placeholder="Welcome [user_name]" useError errorVariable="formSubject" />
                 <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
-                    Bisa pakai Blade syntax: <code class="font-mono">@{{ $name }}</code>
+                    Bisa pakai Blade syntax untuk variable: ketik <code class="font-mono">@{{ $name }}</code> akan di-replace saat render.
                 </p>
             </div>
 
             <div>
                 <x-nawasara-ui::form.label value="Body Email (HTML)" />
                 <x-nawasara-ui::form.textarea wire:model="formBodyHtml" rows="8"
-                    placeholder="&lt;p&gt;Halo @{{ $name }}, ...&lt;/p&gt;" />
+                    placeholder="<p>Halo [user_name], ...</p>" />
                 <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
                     HTML + Blade syntax. Auto wrap di layout Nawasara.
                 </p>
