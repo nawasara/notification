@@ -1,8 +1,29 @@
 {
     "name": "nawasara/notification",
-    "description": "Unified outbound notification — multi-channel routing, templates, queue, audit log",
+    "description": "Unified outbound notification for the Nawasara superapp framework — multi-channel routing, Blade templates, queue dispatch, and an audit log of every send.",
     "type": "library",
     "license": "MIT",
+    "keywords": [
+        "nawasara",
+        "laravel",
+        "notification",
+        "email",
+        "smtp",
+        "template",
+        "queue",
+        "audit"
+    ],
+    "authors": [
+        {
+            "name": "Pringgo J. Saputro",
+            "email": "odyinggo@gmail.com",
+            "role": "Lead Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/nawasara/notification/issues",
+        "source": "https://github.com/nawasara/notification"
+    },
     "autoload": {
         "psr-4": {
             "Nawasara\\Notification\\": "src/"
@@ -26,5 +47,7 @@
                 "Notify": "Nawasara\\Notification\\Facades\\Notify"
             }
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
