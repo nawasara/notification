@@ -7,6 +7,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Nawasara\Notification\Facades\Notify;
 use Nawasara\Notification\Models\NotificationTemplate;
 use Nawasara\Notification\Services\TemplateRenderer;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
@@ -38,6 +39,11 @@ class Table extends Component
     public ?string $previewSubject = null;
     public ?string $previewBody = null;
     public ?string $previewError = null;
+
+    // Test send state
+    public ?int $testSendId = null;
+    public string $testSendRecipient = '';
+    public string $testSendVars = '';
 
     public function updatedSearch(): void { $this->resetPage(); }
     public function updatedStatusFilter(): void { $this->resetPage(); }
@@ -225,6 +231,86 @@ class Table extends Component
         $this->previewBody = null;
         $this->previewError = null;
         $this->dispatch('modal-close:notification-template-preview');
+    }
+
+    // ─── Test Send ───────────────────────────────────────
+
+    public function openTestSend(int $id): void
+    {
+        Gate::authorize('notification.test.send');
+
+        $tpl = NotificationTemplate::find($id);
+        if (! $tpl) {
+            return;
+        }
+
+        $this->testSendId = $id;
+        $this->testSendRecipient = (string) (auth()->user()?->email ?? '');
+
+        // Pre-fill var hint dari schema kalau ada
+        $hint = [];
+        foreach (($tpl->variables ?? []) as $v) {
+            $hint[$v['name'] ?? 'var'] = ($v['type'] ?? 'string') === 'integer' ? 0 : 'sample';
+        }
+        $this->testSendVars = $hint ? json_encode($hint, JSON_PRETTY_PRINT) : "{\n    \"name\": \"Test User\"\n}";
+
+        $this->dispatch('modal-open:notification-template-test-send');
+    }
+
+    public function doTestSend(): void
+    {
+        Gate::authorize('notification.test.send');
+
+        $this->validate([
+            'testSendRecipient' => ['required', 'email', 'max:255'],
+        ]);
+
+        $tpl = NotificationTemplate::find($this->testSendId);
+        if (! $tpl) {
+            $this->toastError('Template not found.');
+            return;
+        }
+
+        if (! $tpl->active) {
+            $this->toastError('Template is inactive — activate it first or test on an active template.');
+            return;
+        }
+
+        $vars = json_decode($this->testSendVars ?: '{}', true);
+        if (! is_array($vars)) {
+            $this->toastError('Variables JSON invalid — periksa format.');
+            return;
+        }
+
+        try {
+            $logs = Notify::to($this->testSendRecipient)
+                ->template($tpl->key)
+                ->data($vars)
+                ->context(['source' => 'template-test-send', 'triggered_by_user_id' => auth()->id()])
+                ->sync()
+                ->send();
+
+            $log = $logs[0] ?? null;
+            if ($log && $log->refresh()->status === \Nawasara\Notification\Models\NotificationLog::STATUS_SENT) {
+                $this->toastSuccess("Test email sent to {$this->testSendRecipient}. Check inbox + /nawasara-notification/logs.");
+            } elseif ($log) {
+                $this->toastError("Send returned status={$log->status}: ".($log->error ?? 'unknown'));
+            } else {
+                $this->toastError('No log created — channel mismatch?');
+            }
+
+            $this->closeTestSend();
+        } catch (\Throwable $e) {
+            $this->toastError('Test send failed: '.$e->getMessage());
+        }
+    }
+
+    public function closeTestSend(): void
+    {
+        $this->testSendId = null;
+        $this->testSendRecipient = '';
+        $this->testSendVars = '';
+        $this->dispatch('modal-close:notification-template-test-send');
     }
 
     // ─── Helpers ─────────────────────────────────────────

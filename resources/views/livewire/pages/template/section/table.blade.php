@@ -63,6 +63,7 @@
                     <td class="px-6 py-3 whitespace-nowrap text-sm text-right">
                         <x-nawasara-ui::dropdown-menu-action :id="$tpl->id" :items="[
                             ['type' => 'click', 'label' => 'Preview', 'wire:click' => 'openPreview('.$tpl->id.')', 'modal' => 'notification-template-preview', 'icon' => 'lucide-eye', 'permission' => 'notification.template.view'],
+                            ['type' => 'click', 'label' => 'Test Send', 'wire:click' => 'openTestSend('.$tpl->id.')', 'modal' => 'notification-template-test-send', 'icon' => 'lucide-send', 'permission' => 'notification.test.send'],
                             ['type' => 'click', 'label' => 'Edit', 'wire:click' => 'openEdit('.$tpl->id.')', 'modal' => 'notification-template-form', 'icon' => 'lucide-pencil', 'permission' => 'notification.template.update'],
                             ['type' => 'click', 'label' => $tpl->active ? 'Nonaktifkan' : 'Aktifkan', 'wire:click' => 'toggleActive('.$tpl->id.')', 'icon' => $tpl->active ? 'lucide-power-off' : 'lucide-power', 'permission' => 'notification.template.update'],
                             ['type' => 'click', 'label' => 'Hapus', 'wire:click' => 'delete('.$tpl->id.')', 'icon' => 'lucide-trash-2', 'confirm' => 'Hapus template ini?', 'permission' => 'notification.template.delete'],
@@ -196,6 +197,42 @@
         @endif
         <x-slot:footer>
             <x-nawasara-ui::button color="neutral" variant="outline" wire:click="closePreview">Tutup</x-nawasara-ui::button>
+        </x-slot:footer>
+    </x-nawasara-ui::modal>
+
+    {{-- Test Send Modal --}}
+    <x-nawasara-ui::modal id="notification-template-test-send" maxWidth="lg" title="Test Send Email">
+        @if ($testSendId)
+            <form wire:submit="doTestSend" id="notification-template-test-send-form" class="space-y-4">
+                <p class="text-xs text-gray-500 dark:text-neutral-400">
+                    Kirim sekali ke email tujuan untuk verify template + delivery jalan. Notifikasi tetap masuk ke
+                    <a href="{{ url('nawasara-notification/logs') }}" wire:navigate class="text-blue-600 hover:underline">log</a>.
+                </p>
+
+                <x-nawasara-ui::form.input label="Recipient (email)" type="email"
+                    wire:model="testSendRecipient" placeholder="anda@kominfo.go.id"
+                    useError errorVariable="testSendRecipient" />
+
+                <div>
+                    <x-nawasara-ui::form.label value="Variables (JSON)" />
+                    <x-nawasara-ui::form.textarea wire:model="testSendVars" rows="4"
+                        class="font-mono text-xs"
+                        placeholder='{"name": "Test User", "days": 7}' />
+                    <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
+                        Sesuaikan dengan variable yang dipakai di template body/subject.
+                    </p>
+                </div>
+            </form>
+        @endif
+        <x-slot:footer>
+            <x-nawasara-ui::button color="neutral" variant="outline" wire:click="closeTestSend">Batal</x-nawasara-ui::button>
+            <x-nawasara-ui::button type="submit" form="notification-template-test-send-form" color="primary">
+                <x-slot:icon>
+                    <x-lucide-send wire:loading.class="hidden" wire:target="doTestSend" />
+                    <x-lucide-loader-2 wire:loading wire:target="doTestSend" class="animate-spin" />
+                </x-slot:icon>
+                Kirim Test
+            </x-nawasara-ui::button>
         </x-slot:footer>
     </x-nawasara-ui::modal>
 </div>
