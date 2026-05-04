@@ -121,7 +121,7 @@ class Table extends Component
             'subject' => $this->formSubject ?: null,
             'body_email_html' => $this->formBodyHtml ?: null,
             'body_email_text' => $this->formBodyText ?: null,
-            'channels' => $this->formChannels,
+            'channels' => array_values(array_filter($this->formChannels ?: ['email'])),
             'priority' => $this->formPriority,
             'active' => $this->formActive,
         ];

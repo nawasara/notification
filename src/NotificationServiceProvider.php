@@ -3,9 +3,11 @@
 namespace Nawasara\Notification;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Nawasara\Notification\Listeners\AlertOnSyncFailure;
 use Nawasara\Notification\Services\NotificationService;
 use Nawasara\Notification\Services\TemplateRenderer;
 use Symfony\Component\Finder\Finder;
@@ -19,6 +21,19 @@ class NotificationServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         Blade::anonymousComponentPath(__DIR__.'/../resources/views/components', 'nawasara-notification');
         $this->registerLivewire();
+        $this->registerEventListeners();
+    }
+
+    /**
+     * Subscribe to events from sister packages. Pakai class_exists guard
+     * supaya kalau dependency optional (misal nawasara/sync) tidak ke-install,
+     * tidak crash di boot.
+     */
+    protected function registerEventListeners(): void
+    {
+        if (class_exists(\Nawasara\Sync\Events\SyncJobFinalFailed::class)) {
+            Event::listen(\Nawasara\Sync\Events\SyncJobFinalFailed::class, AlertOnSyncFailure::class);
+        }
     }
 
     public function register(): void
