@@ -3,25 +3,22 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
         @php
             $statusCards = [
-                'queued' => ['label' => 'Queued', 'color' => 'blue'],
-                'sending' => ['label' => 'Sending', 'color' => 'blue'],
-                'sent' => ['label' => 'Sent', 'color' => 'green'],
-                'delivered' => ['label' => 'Delivered', 'color' => 'green'],
-                'failed' => ['label' => 'Failed', 'color' => 'red'],
-                'bounced' => ['label' => 'Bounced', 'color' => 'red'],
-            ];
-            $colorMap = [
-                'blue' => 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800',
-                'green' => 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800',
-                'red' => 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-800',
+                'queued' => ['label' => 'Queued', 'icon' => 'lucide-circle-dashed', 'color' => 'primary'],
+                'sending' => ['label' => 'Sending', 'icon' => 'lucide-send', 'color' => 'info'],
+                'sent' => ['label' => 'Sent', 'icon' => 'lucide-check', 'color' => 'success'],
+                'delivered' => ['label' => 'Delivered', 'icon' => 'lucide-check-check', 'color' => 'success'],
+                'failed' => ['label' => 'Failed', 'icon' => 'lucide-x-circle', 'color' => 'danger'],
+                'bounced' => ['label' => 'Bounced', 'icon' => 'lucide-undo-2', 'color' => 'danger'],
             ];
         @endphp
         @foreach ($statusCards as $key => $cfg)
-            <button type="button" wire:click="$set('statusFilter', '{{ $statusFilter === $key ? '' : $key }}')"
-                class="text-left rounded-xl border p-3 transition {{ $statusFilter === $key ? 'ring-2 ring-blue-200 dark:ring-blue-900 ' : '' }} {{ $colorMap[$cfg['color']] }}">
-                <div class="text-xs font-medium uppercase">{{ $cfg['label'] }}</div>
-                <div class="text-2xl font-bold mt-1">{{ $this->statusCounts[$key] ?? 0 }}</div>
-            </button>
+            <x-nawasara-ui::stat-card
+                :label="$cfg['label']"
+                :value="$this->statusCounts[$key] ?? 0"
+                :icon="$cfg['icon']"
+                :color="$cfg['color']"
+                :active="$statusFilter === $key"
+                wire:click="setStatusFilter('{{ $key }}')" />
         @endforeach
     </div>
 

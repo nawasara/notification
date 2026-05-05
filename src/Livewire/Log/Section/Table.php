@@ -30,6 +30,16 @@ class Table extends Component
     public function updatedStatusFilter(): void { $this->resetPage(); }
     public function updatedChannelFilter(): void { $this->resetPage(); }
 
+    /**
+     * Toggle behavior for clickable status stat-card: clicking the active card
+     * un-filters; clicking another switches to it.
+     */
+    public function setStatusFilter(string $status): void
+    {
+        $this->statusFilter = $this->statusFilter === $status ? '' : $status;
+        $this->resetPage();
+    }
+
     #[Computed]
     public function logs()
     {
