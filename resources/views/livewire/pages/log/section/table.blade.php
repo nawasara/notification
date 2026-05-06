@@ -1,5 +1,5 @@
 <div>
-    {{-- Status counts --}}
+    {{-- Status counts — clickable filter cards --}}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
         @php
             $statusCards = [
@@ -7,7 +7,7 @@
                 'sending' => ['label' => 'Sending', 'icon' => 'lucide-send', 'color' => 'info'],
                 'sent' => ['label' => 'Sent', 'icon' => 'lucide-check', 'color' => 'success'],
                 'delivered' => ['label' => 'Delivered', 'icon' => 'lucide-check-check', 'color' => 'success'],
-                'failed' => ['label' => 'Failed', 'icon' => 'lucide-x-circle', 'color' => 'danger'],
+                'failed' => ['label' => 'Failed', 'icon' => 'lucide-circle-x', 'color' => 'danger'],
                 'bounced' => ['label' => 'Bounced', 'icon' => 'lucide-undo-2', 'color' => 'danger'],
             ];
         @endphp
@@ -18,6 +18,7 @@
                 :icon="$cfg['icon']"
                 :color="$cfg['color']"
                 :active="$statusFilter === $key"
+                accent
                 wire:click="setStatusFilter('{{ $key }}')" />
         @endforeach
     </div>
@@ -88,12 +89,12 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
-                        <div class="inline-flex items-center justify-center size-12 rounded-2xl bg-gray-100 dark:bg-neutral-800 mb-3">
-                            <x-lucide-bell-off class="size-6 text-gray-400 dark:text-neutral-500" />
-                        </div>
-                        <p class="text-sm font-semibold text-gray-700 dark:text-neutral-300">Belum ada notification log</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-neutral-400">Notifikasi yang dikirim akan tercatat di sini untuk audit trail.</p>
+                    <td colspan="7">
+                        <x-nawasara-ui::empty-state
+                            icon="lucide-bell-off"
+                            title="Belum ada notification log"
+                            description="Notifikasi yang dikirim akan tercatat di sini untuk audit trail."
+                            inline />
                     </td>
                 </tr>
             @endforelse

@@ -72,12 +72,12 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
-                        <div class="inline-flex items-center justify-center size-12 rounded-2xl bg-gray-100 dark:bg-neutral-800 mb-3">
-                            <x-lucide-mail-plus class="size-6 text-gray-400 dark:text-neutral-500" />
-                        </div>
-                        <p class="text-sm font-semibold text-gray-700 dark:text-neutral-300">Belum ada template notifikasi</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-neutral-400">Klik <strong class="text-gray-700 dark:text-neutral-300">Tambah Template</strong> di atas untuk mulai membuat template email.</p>
+                    <td colspan="6">
+                        <x-nawasara-ui::empty-state
+                            icon="lucide-mail-plus"
+                            title="Belum ada template notifikasi"
+                            description="Klik tombol Tambah Template di atas untuk mulai membuat template email."
+                            inline />
                     </td>
                 </tr>
             @endforelse
