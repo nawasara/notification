@@ -72,8 +72,12 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500 dark:text-neutral-400">
-                        Belum ada template. Klik <strong>Tambah Template</strong> untuk mulai.
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="inline-flex items-center justify-center size-12 rounded-2xl bg-gray-100 dark:bg-neutral-800 mb-3">
+                            <x-lucide-mail-plus class="size-6 text-gray-400 dark:text-neutral-500" />
+                        </div>
+                        <p class="text-sm font-semibold text-gray-700 dark:text-neutral-300">Belum ada template notifikasi</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-neutral-400">Klik <strong class="text-gray-700 dark:text-neutral-300">Tambah Template</strong> di atas untuk mulai membuat template email.</p>
                     </td>
                 </tr>
             @endforelse
@@ -142,7 +146,7 @@
                 <p class="text-xs text-gray-500 dark:text-neutral-400">MVP: hanya email aktif. WA + Telegram + In-app menyusul.</p>
                 <div class="mt-2 flex gap-3">
                     <label class="flex items-center gap-2 text-sm">
-                        <input type="checkbox" wire:model="formChannels" value="email" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600">
+                        <input type="checkbox" wire:model="formChannels" value="email" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 dark:border-neutral-600">
                         Email
                     </label>
                 </div>
@@ -206,7 +210,7 @@
             <form wire:submit="doTestSend" id="notification-template-test-send-form" class="space-y-4">
                 <p class="text-xs text-gray-500 dark:text-neutral-400">
                     Kirim sekali ke email tujuan untuk verify template + delivery jalan. Notifikasi tetap masuk ke
-                    <a href="{{ url('nawasara-notification/logs') }}" wire:navigate class="text-blue-600 hover:underline">log</a>.
+                    <a href="{{ url('nawasara-notification/logs') }}" wire:navigate class="text-emerald-700 dark:text-emerald-400 hover:underline font-medium">log</a>.
                 </p>
 
                 <x-nawasara-ui::form.input label="Recipient (email)" type="email"
