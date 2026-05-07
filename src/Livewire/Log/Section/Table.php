@@ -9,12 +9,14 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Nawasara\Notification\Jobs\SendNotificationJob;
 use Nawasara\Notification\Models\NotificationLog;
+use Nawasara\Ui\Livewire\Concerns\HasArrayFilters;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
 use Nawasara\Ui\Livewire\Concerns\HasExport;
 use Nawasara\Ui\Livewire\Concerns\HasTimeWindow;
 
 class Table extends Component
 {
+    use HasArrayFilters;
     use HasBrowserToast;
     use HasExport;
     use HasTimeWindow;
@@ -33,10 +35,14 @@ class Table extends Component
      * Empty array == no filter. Channel set is small (email today,
      * sms/whatsapp/push later) so it benefits from multi-select.
      *
+     * Type hint omitted — legacy bookmarks may carry scalar values like
+     * `?channelFilter=email`; HasArrayFilters coerces to [scalar] at
+     * boot before any computed property reads it.
+     *
      * @var array<int, string>
      */
     #[Url]
-    public array $channelFilter = [];
+    public $channelFilter = [];
 
     public string $search = '';
 
@@ -45,6 +51,16 @@ class Table extends Component
     public function updatedSearch(): void { $this->resetPage(); }
     public function updatedStatusFilter(): void { $this->resetPage(); }
     public function updatedChannelFilter(): void { $this->resetPage(); }
+
+    /**
+     * Filter properties that may receive scalar values from legacy
+     * bookmarks. HasArrayFilters wraps any scalar into a single-element
+     * array at boot. statusFilter stays string (single-toggle UI).
+     */
+    protected function arrayFilters(): array
+    {
+        return ['channelFilter'];
+    }
 
     /**
      * Toggle behavior for clickable status stat-card: clicking the active card
