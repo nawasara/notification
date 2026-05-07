@@ -108,17 +108,22 @@
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm">
                         @php
-                            $sColor = match($log->status) {
-                                'queued', 'sending' => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                                'sent' => 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-                                'delivered' => 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                'failed', 'bounced' => 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                                default => 'bg-gray-100 text-gray-600',
+                            // Map notification status to badge color tokens.
+                            // queued/sending = blue (in-flight, non-final);
+                            // sent = indigo (handed off but not yet acked);
+                            // delivered = success (final positive);
+                            // failed/bounced = danger (final negative).
+                            $statusColor = match($log->status) {
+                                'queued', 'sending' => 'blue',
+                                'sent' => 'indigo',
+                                'delivered' => 'success',
+                                'failed', 'bounced' => 'danger',
+                                default => 'neutral',
                             };
                         @endphp
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $sColor }}">
+                        <x-nawasara-ui::badge :color="$statusColor">
                             {{ ucfirst($log->status) }}
-                        </span>
+                        </x-nawasara-ui::badge>
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-neutral-400 font-mono">
                         {{ $log->attempts }}

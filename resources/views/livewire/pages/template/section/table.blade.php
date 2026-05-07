@@ -84,22 +84,25 @@
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm">
                         @php
-                            $pColor = match($tpl->priority) {
-                                'critical' => 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                                'high' => 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                'low' => 'bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-neutral-400',
-                                default => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                            // Priority maps to severity-style badge colors.
+                            // critical = danger; high = warning; low = neutral
+                            // (deprioritized); normal/default = blue.
+                            $priorityColor = match($tpl->priority) {
+                                'critical' => 'danger',
+                                'high' => 'warning',
+                                'low' => 'neutral',
+                                default => 'blue',
                             };
                         @endphp
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $pColor }}">
+                        <x-nawasara-ui::badge :color="$priorityColor">
                             {{ ucfirst($tpl->priority) }}
-                        </span>
+                        </x-nawasara-ui::badge>
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm">
                         @if ($tpl->active)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                            <x-nawasara-ui::badge color="success">Active</x-nawasara-ui::badge>
                         @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-neutral-400">Inactive</span>
+                            <x-nawasara-ui::badge color="neutral">Inactive</x-nawasara-ui::badge>
                         @endif
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm text-right">
