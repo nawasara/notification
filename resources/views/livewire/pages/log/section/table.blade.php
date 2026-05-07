@@ -1,5 +1,14 @@
 <div>
-    {{-- Status counts — clickable filter cards --}}
+    {{-- Page header — title + description left, time-window right. --}}
+    <x-nawasara-ui::page-header
+        title="Notification Logs"
+        description="Audit setiap notifikasi yang Nawasara kirim — channel, recipient, status, error. Retry failed dari sini."
+        :count="$this->logs->total().' total'">
+        <x-nawasara-ui::time-window :window="$window" :from="$from" :to="$to" />
+    </x-nawasara-ui::page-header>
+
+    {{-- Status counts — clickable filter cards. Counts reflect the active
+         time window (statusCounts() in PHP applies applyTimeWindow). --}}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
         @php
             $statusCards = [
@@ -23,29 +32,63 @@
         @endforeach
     </div>
 
-    <x-nawasara-ui::filter-bar searchPlaceholder="Cari recipient, subject, template key..." searchModel="search">
-        <x-nawasara-ui::filter-dropdown label="Channel" model="channelFilter"
-            :items="['all' => 'Semua Channel', 'email' => 'Email']" />
+    @php
+        $channelOptions = ['email' => 'Email'];
+    @endphp
 
-        <x-slot:chips>
-            @if ($statusFilter)
-                <x-nawasara-ui::filter-chip label="Status: {{ ucfirst($statusFilter) }}" model="statusFilter" />
-            @endif
-            @if ($channelFilter)
-                <x-nawasara-ui::filter-chip label="Channel: {{ $channelFilter }}" model="channelFilter" />
-            @endif
-            @if ($search)
-                <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
-            @endif
-        </x-slot:chips>
-    </x-nawasara-ui::filter-bar>
+    {{-- Toolbar — Channel filter (multi-select) + search + export.
+         Status is filtered via the stat-cards above (single-toggle UX),
+         so it's NOT included in the filter-panel here. --}}
+    <div class="space-y-2 mb-4">
+        <div class="flex flex-col md:flex-row md:flex-nowrap md:items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <x-nawasara-ui::filter-panel
+                    label="Filter"
+                    :state="['channelFilter' => $channelFilter]"
+                    :multiple="['channelFilter']"
+                    :labels="['channelFilter' => $channelOptions]"
+                    :dimensions="['channelFilter' => 'Channel']">
+                    <x-nawasara-ui::filter-group label="Channel" model="channelFilter" :items="$channelOptions" icon="lucide-radio" />
+                </x-nawasara-ui::filter-panel>
+            </div>
 
+            <div class="relative w-full md:flex-1 md:min-w-0">
+                <div class="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3.5">
+                    <x-lucide-search class="shrink-0 size-4 text-gray-400 dark:text-neutral-500" />
+                </div>
+                <input type="text" wire:model.live.debounce.300ms="search"
+                    placeholder="Cari recipient, subject, atau template key..."
+                    class="h-10 ps-10 pe-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-emerald-600 focus:ring-emerald-600 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 dark:placeholder-neutral-500 dark:focus:ring-neutral-600" />
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <x-nawasara-ui::export-button
+                    action="export"
+                    tooltip="Ekspor notification logs (max 10rb baris)" />
+            </div>
+        </div>
+
+        <div wire:ignore data-filter-chips></div>
+
+        @if ($search || $statusFilter)
+            <div class="flex flex-wrap items-center gap-2">
+                @if ($statusFilter)
+                    <x-nawasara-ui::filter-chip label="Status: {{ ucfirst($statusFilter) }}" model="statusFilter" />
+                @endif
+                @if ($search)
+                    <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
+                @endif
+            </div>
+        @endif
+    </div>
+
+    {{-- Sticky last column for the action menu so retry stays reachable. --}}
     <x-nawasara-ui::table
-        :headers="['Waktu', 'Channel', 'Recipient', 'Template / Subject', 'Status', 'Attempts', '']"
-        :title="'Logs ('.$this->logs->total().' total)'">
+        stickyLast
+        :headers="['Waktu', 'Channel', 'Recipient', 'Template / Subject', 'Status', 'Attempts', '']">
         <x-slot:table>
             @forelse ($this->logs as $log)
-                <tr>
+                <tr wire:key="notif-log-{{ $log->id }}">
                     <td class="px-6 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-neutral-400 font-mono">
                         {{ $log->created_at->format('d M H:i:s') }}
                     </td>
@@ -90,11 +133,20 @@
             @empty
                 <tr>
                     <td colspan="7">
-                        <x-nawasara-ui::empty-state
-                            icon="lucide-bell-off"
-                            title="Belum ada notification log"
-                            description="Notifikasi yang dikirim akan tercatat di sini untuk audit trail."
-                            inline />
+                        @if ($search || $statusFilter || ! empty($channelFilter) || $window !== '7d' || $from || $to)
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-search-x"
+                                title="Tidak ada log yang cocok"
+                                description="Coba ubah periode/filter atau hapus search keyword."
+                                variant="filter"
+                                inline />
+                        @else
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-bell-off"
+                                title="Belum ada notification log 7 hari terakhir"
+                                description="Pilih periode lebih panjang atau Custom untuk melihat data lebih lama."
+                                inline />
+                        @endif
                     </td>
                 </tr>
             @endforelse

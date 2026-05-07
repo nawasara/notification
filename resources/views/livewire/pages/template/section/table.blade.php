@@ -1,26 +1,68 @@
 <div>
-    <x-nawasara-ui::filter-bar searchPlaceholder="Cari key, name, deskripsi..." searchModel="search">
-        <x-nawasara-ui::filter-dropdown label="Status" model="statusFilter"
-            :items="['all' => 'Semua Status', 'active' => 'Active', 'inactive' => 'Inactive']" />
-        <x-nawasara-ui::filter-dropdown label="Priority" model="priorityFilter"
-            :items="['all' => 'Semua Priority', 'low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'critical' => 'Critical']" />
+    @php
+        $statusOptions = ['active' => 'Active', 'inactive' => 'Inactive'];
+        $priorityOptions = ['low' => 'Low', 'normal' => 'Normal', 'high' => 'High', 'critical' => 'Critical'];
+    @endphp
 
-        <x-slot:chips>
-            @if ($statusFilter)
-                <x-nawasara-ui::filter-chip label="Status: {{ ucfirst($statusFilter) }}" model="statusFilter" />
-            @endif
-            @if ($priorityFilter)
-                <x-nawasara-ui::filter-chip label="Priority: {{ ucfirst($priorityFilter) }}" model="priorityFilter" />
-            @endif
-            @if ($search)
+    {{-- Page header — title + description left, primary action right.
+         Templates aren't time-bound (config data, not events) so the
+         time-window component is intentionally omitted. --}}
+    <x-nawasara-ui::page-header
+        title="Notification Templates"
+        description="Template untuk semua notifikasi keluar Nawasara — email, WA (future), Telegram (future), in-app (future)."
+        :count="$this->templates->total().' total'">
+        @can('notification.template.create')
+            <x-nawasara-ui::button color="primary" wire:click="$dispatch('openCreateTemplate')">
+                <x-slot:icon><x-lucide-plus /></x-slot:icon>
+                Tambah Template
+            </x-nawasara-ui::button>
+        @endcan
+    </x-nawasara-ui::page-header>
+
+    {{-- Toolbar — Status + Priority filters + search + export. --}}
+    <div class="space-y-2 mb-4">
+        <div class="flex flex-col md:flex-row md:flex-nowrap md:items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <x-nawasara-ui::filter-panel
+                    label="Filter"
+                    :state="['statusFilter' => $statusFilter, 'priorityFilter' => $priorityFilter]"
+                    :multiple="['statusFilter', 'priorityFilter']"
+                    :labels="['statusFilter' => $statusOptions, 'priorityFilter' => $priorityOptions]"
+                    :dimensions="['statusFilter' => 'Status', 'priorityFilter' => 'Priority']">
+                    <x-nawasara-ui::filter-group label="Status" model="statusFilter" :items="$statusOptions" icon="lucide-circle-check" />
+                    <x-nawasara-ui::filter-group label="Priority" model="priorityFilter" :items="$priorityOptions" icon="lucide-flag" />
+                </x-nawasara-ui::filter-panel>
+            </div>
+
+            <div class="relative w-full md:flex-1 md:min-w-0">
+                <div class="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3.5">
+                    <x-lucide-search class="shrink-0 size-4 text-gray-400 dark:text-neutral-500" />
+                </div>
+                <input type="text" wire:model.live.debounce.300ms="search"
+                    placeholder="Cari key, name, atau deskripsi..."
+                    class="h-10 ps-10 pe-4 block w-full border border-gray-200 rounded-lg text-sm focus:border-emerald-600 focus:ring-emerald-600 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 dark:placeholder-neutral-500 dark:focus:ring-neutral-600" />
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <x-nawasara-ui::export-button
+                    action="export"
+                    tooltip="Ekspor template list"
+                    permission="notification.template.view" />
+            </div>
+        </div>
+
+        <div wire:ignore data-filter-chips></div>
+
+        @if ($search)
+            <div class="flex flex-wrap items-center gap-2">
                 <x-nawasara-ui::filter-chip label="Cari: {{ $search }}" model="search" />
-            @endif
-        </x-slot:chips>
-    </x-nawasara-ui::filter-bar>
+            </div>
+        @endif
+    </div>
 
     <x-nawasara-ui::table
-        :headers="['Key', 'Name', 'Channels', 'Priority', 'Status', '']"
-        :title="'Templates ('.$this->templates->total().' total)'">
+        stickyLast
+        :headers="['Key', 'Name', 'Channels', 'Priority', 'Status', '']">
         <x-slot:table>
             @forelse ($this->templates as $tpl)
                 <tr>
@@ -73,11 +115,20 @@
             @empty
                 <tr>
                     <td colspan="6">
-                        <x-nawasara-ui::empty-state
-                            icon="lucide-mail-plus"
-                            title="Belum ada template notifikasi"
-                            description="Klik tombol Tambah Template di atas untuk mulai membuat template email."
-                            inline />
+                        @if ($search || ! empty($statusFilter) || ! empty($priorityFilter))
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-search-x"
+                                title="Tidak ada template yang cocok"
+                                description="Coba ubah filter atau hapus search keyword."
+                                variant="filter"
+                                inline />
+                        @else
+                            <x-nawasara-ui::empty-state
+                                icon="lucide-mail-plus"
+                                title="Belum ada template notifikasi"
+                                description="Klik tombol Tambah Template di atas untuk mulai membuat template email."
+                                inline />
+                        @endif
                     </td>
                 </tr>
             @endforelse

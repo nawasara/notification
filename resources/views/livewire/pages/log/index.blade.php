@@ -4,12 +4,11 @@
             :items="[['label' => 'Komunikasi', 'url' => '#'], ['label' => 'Notification Logs']]" />
     </x-slot>
 
+    {{-- Title + description hoisted into the section component so they
+         share a row with the time-window selector (which lives in the
+         component's reactive state). Index is just a shell: breadcrumb +
+         container + section. --}}
     <x-nawasara-ui::page.container>
-        <x-nawasara-ui::page.title>Notification Logs</x-nawasara-ui::page.title>
-        <p class="text-sm text-gray-500 dark:text-neutral-400 mb-4">
-            Audit setiap notifikasi yang Nawasara kirim — channel, recipient, status, error. Retry failed dari sini.
-        </p>
-
         @livewire('nawasara-notification.log.section.table')
     </x-nawasara-ui::page.container>
 </div>

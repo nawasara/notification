@@ -11,15 +11,27 @@ use Nawasara\Notification\Facades\Notify;
 use Nawasara\Notification\Models\NotificationTemplate;
 use Nawasara\Notification\Services\TemplateRenderer;
 use Nawasara\Ui\Livewire\Concerns\HasBrowserToast;
+use Nawasara\Ui\Livewire\Concerns\HasExport;
 
 class Table extends Component
 {
     use HasBrowserToast;
+    use HasExport;
     use WithPagination;
 
     public string $search = '';
-    public string $statusFilter = '';
-    public string $priorityFilter = '';
+
+    /**
+     * Multi-select filters (filter-panel array semantics).
+     * Empty array == no filter. Statuses are 'active' / 'inactive';
+     * priorities are 'low' / 'normal' / 'high' / 'critical'.
+     *
+     * @var array<int, string>
+     */
+    public array $statusFilter = [];
+
+    /** @var array<int, string> */
+    public array $priorityFilter = [];
 
     // Form modal state
     public ?int $editingId = null;
@@ -58,9 +70,18 @@ class Table extends Component
                     ->orWhere('name', 'like', '%'.$this->search.'%')
                     ->orWhere('description', 'like', '%'.$this->search.'%');
             }))
-            ->when($this->statusFilter === 'active', fn ($q) => $q->where('active', true))
-            ->when($this->statusFilter === 'inactive', fn ($q) => $q->where('active', false))
-            ->when($this->priorityFilter, fn ($q) => $q->where('priority', $this->priorityFilter))
+            ->when(! empty($this->statusFilter), function ($q) {
+                // 'active' / 'inactive' translate to a boolean column.
+                // Both values selected == no constraint (every row matches).
+                $wantActive = in_array('active', $this->statusFilter, true);
+                $wantInactive = in_array('inactive', $this->statusFilter, true);
+                if ($wantActive && ! $wantInactive) {
+                    $q->where('active', true);
+                } elseif ($wantInactive && ! $wantActive) {
+                    $q->where('active', false);
+                }
+            })
+            ->when(! empty($this->priorityFilter), fn ($q) => $q->whereIn('priority', $this->priorityFilter))
             ->orderBy('key')
             ->paginate(25);
     }
@@ -328,6 +349,39 @@ class Table extends Component
         $this->formPriority = 'normal';
         $this->formActive = true;
         $this->resetErrorBag();
+    }
+
+    /**
+     * Export filename base — timestamp + extension appended by HasExport.
+     */
+    protected function exportFilename(): string
+    {
+        return 'notification-templates';
+    }
+
+    /**
+     * Export ALL templates (no filter) per spec. Body HTML/text are
+     * included verbatim because admins offboarding/auditing templates
+     * typically want the source verbatim.
+     */
+    protected function exportData(): iterable
+    {
+        return NotificationTemplate::query()
+            ->orderBy('key')
+            ->get()
+            ->map(fn (NotificationTemplate $tpl) => [
+                'Key' => $tpl->key,
+                'Name' => $tpl->name,
+                'Description' => $tpl->description,
+                'Subject' => $tpl->subject,
+                'Body HTML' => $tpl->body_email_html,
+                'Body Text' => $tpl->body_email_text,
+                'Channels' => is_array($tpl->channels) ? implode(', ', $tpl->channels) : (string) $tpl->channels,
+                'Priority' => $tpl->priority,
+                'Active' => $tpl->active ? 'Yes' : 'No',
+                'Created' => optional($tpl->created_at)->format('Y-m-d H:i:s'),
+                'Updated' => optional($tpl->updated_at)->format('Y-m-d H:i:s'),
+            ]);
     }
 
     public function render()
