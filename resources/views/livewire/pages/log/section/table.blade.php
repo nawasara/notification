@@ -7,27 +7,29 @@
         <x-nawasara-ui::time-window :window="$window" :from="$from" :to="$to" />
     </x-nawasara-ui::page-header>
 
-    {{-- Status counts — clickable filter cards. Counts reflect the active
+    {{-- Status counts — clickable filter cards. Compact mode keeps the
+         row of 6 from dominating the page; counts reflect the active
          time window (statusCounts() in PHP applies applyTimeWindow). --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-4">
         @php
+            // Icon dropped: compact mode shows a colored dot beside the
+            // label instead, which carries enough state signal for a
+            // 6-card filter row without the visual heft of an icon box.
             $statusCards = [
-                'queued' => ['label' => 'Queued', 'icon' => 'lucide-circle-dashed', 'color' => 'primary'],
-                'sending' => ['label' => 'Sending', 'icon' => 'lucide-send', 'color' => 'info'],
-                'sent' => ['label' => 'Sent', 'icon' => 'lucide-check', 'color' => 'success'],
-                'delivered' => ['label' => 'Delivered', 'icon' => 'lucide-check-check', 'color' => 'success'],
-                'failed' => ['label' => 'Failed', 'icon' => 'lucide-circle-x', 'color' => 'danger'],
-                'bounced' => ['label' => 'Bounced', 'icon' => 'lucide-undo-2', 'color' => 'danger'],
+                'queued' => ['label' => 'Queued', 'color' => 'primary'],
+                'sending' => ['label' => 'Sending', 'color' => 'info'],
+                'sent' => ['label' => 'Sent', 'color' => 'success'],
+                'delivered' => ['label' => 'Delivered', 'color' => 'success'],
+                'failed' => ['label' => 'Failed', 'color' => 'danger'],
+                'bounced' => ['label' => 'Bounced', 'color' => 'danger'],
             ];
         @endphp
         @foreach ($statusCards as $key => $cfg)
-            <x-nawasara-ui::stat-card
+            <x-nawasara-ui::stat-card compact
                 :label="$cfg['label']"
                 :value="$this->statusCounts[$key] ?? 0"
-                :icon="$cfg['icon']"
                 :color="$cfg['color']"
                 :active="$statusFilter === $key"
-                accent
                 wire:click="setStatusFilter('{{ $key }}')" />
         @endforeach
     </div>
