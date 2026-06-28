@@ -7,6 +7,7 @@ return [
         'workspace' => 'communication',
         'label' => 'Komunikasi',
         'icon' => 'lucide-megaphone',
+        'group' => 'Layanan',
         'url' => '',
         'permission' => 'notification.template.view',
         'submenu' => [
