@@ -81,7 +81,10 @@ class AlertOnSyncFailure implements ShouldQueue
             'service' => $event->tracker->service,
             'action' => $event->tracker->actionLabel(),
             'consecutive_failures' => $consecutive,
-            'last_error' => (string) ($event->tracker->error ?? $event->exception->getMessage()),
+            // errorMessage, bukan exception->getMessage(): listener ini queued,
+            // dan $exception sengaja tidak ikut di-serialize (lihat catatan di
+            // SyncJobFinalFailed) karena Throwable bisa membawa closure.
+            'last_error' => (string) ($event->tracker->error ?: $event->errorMessage),
             'sync_jobs_url' => url('admin/sync/jobs?service='.urlencode($event->tracker->service)),
         ];
 
