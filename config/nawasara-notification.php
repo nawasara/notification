@@ -42,6 +42,7 @@ return [
     */
     'channels' => [
         'email' => \Nawasara\Notification\Channels\EmailChannel::class,
+        'telegram' => \Nawasara\Notification\Channels\TelegramChannel::class,
     ],
 
     /*

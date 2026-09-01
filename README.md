@@ -11,7 +11,8 @@ Unified outbound notification for the Nawasara superapp framework. Build a Blade
 - **Test send** — kick off a real send to your own email from the template list to verify rendering and delivery end-to-end
 - **Audit log** — every send is one row in `nawasara_notification_logs` with status (queued / sending / sent / delivered / failed / bounced), error trace, attempts, and rendered body
 - **Retry from UI** — failed and bounced logs can be re-dispatched in one click
-- **Future channels** — WhatsApp, Telegram, and in-app are stubbed in the schema and contract; only `EmailChannel` is implemented in the MVP
+- **Telegram channel** — posts to a group, split by **forum topic** (`message_thread_id`). Credentials and topic ids live in the `telegram` Vault group. Alerts route by severity first: `critical` gets its own topic, because in an inbox 4 critical alerts look exactly like the 405 warnings around them
+- **Future channels** — WhatsApp and in-app are stubbed in the schema and contract
 
 ## Installation
 
@@ -38,6 +39,19 @@ The package reads SMTP credentials from the **`smtp` Vault group** at send time.
 | From Name | `Nawasara Kominfo` |
 
 Use **Test Connection** in the dropdown to verify the host is reachable. If Vault is empty, the channel falls back to whatever Laravel resolves from `.env` — useful in `local` where `MAIL_MAILER=log` writes the rendered email to `storage/logs/laravel.log`.
+
+## Recipients are resolved per channel
+
+`resolveRecipient()` picks the field that matches the channel: `email` for
+email, `telegram_chat_id` for telegram. **Pass the user object**, not a string,
+and every enabled channel finds its own address.
+
+A string that does not match the channel's format is **rejected and logged**,
+not passed through. This matters more than it looks: before it was enforced,
+any string went to any channel, so turning on a new channel would quietly send
+e-mail addresses to Telegram as "chat ids" — failing at the provider, landing
+in a log nobody reads. A channel that silently sends nothing is far worse than
+one that plainly refuses, because everything appears to be working.
 
 ## Sending notifications
 
@@ -93,7 +107,6 @@ Notify::to($user)->template('welcome')->data([...])->sync()->send();
 ## Roadmap
 
 - WhatsApp channel via `nawasara/whatsapp-forwarder`
-- Telegram bot channel
 - In-app notification bell in topbar
 - Webhook delivery callbacks (open/click tracking, bounce handling)
 - User notification preferences (per-channel, quiet hours)

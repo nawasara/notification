@@ -2,6 +2,7 @@
 
 namespace Nawasara\Notification\Services;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Nawasara\Notification\Contracts\NotificationChannelDriver;
 use Nawasara\Notification\Jobs\SendNotificationJob;
@@ -30,22 +31,28 @@ class NotificationService
     protected array $channels = [];
 
     protected ?string $templateKey = null;
+
     protected array $data = [];
+
     protected ?string $subject = null;
+
     protected ?string $body = null;
+
     protected string $priority = 'normal';
+
     protected array $context = [];
+
     protected bool $sync = false;
 
     public function __construct(
         protected TemplateRenderer $renderer,
-    ) {
-    }
+    ) {}
 
     public function to(mixed ...$recipients): static
     {
         $clone = clone $this;
         $clone->recipients = array_merge($clone->recipients, array_values($recipients));
+
         return $clone;
     }
 
@@ -53,6 +60,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->channels = array_values((array) $channel);
+
         return $clone;
     }
 
@@ -60,6 +68,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->templateKey = $key;
+
         return $clone;
     }
 
@@ -67,6 +76,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->data = $data;
+
         return $clone;
     }
 
@@ -74,6 +84,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->subject = $subject;
+
         return $clone;
     }
 
@@ -81,6 +92,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->body = $body;
+
         return $clone;
     }
 
@@ -88,6 +100,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->priority = $priority;
+
         return $clone;
     }
 
@@ -95,6 +108,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->context = array_merge($clone->context, $context);
+
         return $clone;
     }
 
@@ -105,6 +119,7 @@ class NotificationService
     {
         $clone = clone $this;
         $clone->sync = true;
+
         return $clone;
     }
 
@@ -178,20 +193,57 @@ class NotificationService
      */
     protected function resolveRecipient(mixed $recipient, string $channel): ?string
     {
-        // Plain string — assume sudah dalam format yang benar
-        if (is_string($recipient)) {
+        // Objek pengguna — ambil bidang yang sesuai KANALNYA.
+        //
+        // Dipindah ke atas supaya pemanggil dapat menyerahkan objek pengguna
+        // apa adanya dan tiap kanal mengambil bagiannya sendiri: surel untuk
+        // email, chat id untuk telegram. Itulah yang membuat satu penerima
+        // dapat dijangkau lewat beberapa kanal tanpa pemanggil perlu tahu
+        // kanal mana saja yang aktif.
+        if (is_object($recipient)) {
+            $nilai = match ($channel) {
+                'email' => $recipient->email ?? null,
+                'telegram' => $recipient->telegram_chat_id ?? null,
+                'whatsapp' => $recipient->whatsapp_number ?? null,
+                default => null,
+            };
+
+            return ($nilai !== null && $nilai !== '') ? (string) $nilai : null;
+        }
+
+        if (! is_string($recipient) || $recipient === '') {
+            return null;
+        }
+
+        // ⚠️ String TIDAK lagi diloloskan begitu saja.
+        //
+        // Dulu string apa pun diteruskan ke kanal apa pun. Akibatnya, begitu
+        // sebuah kanal baru dinyalakan, alamat surel dari pemanggil lama ikut
+        // dikirim ke kanal itu sebagai "penerima" — gagal di sisi penyedia,
+        // tercatat di log, dan tidak ada yang tahu peringatannya tak sampai.
+        //
+        // Kegagalan diam seperti itu yang paling mahal: semuanya tampak
+        // berjalan. Jadi ketidakcocokan dibuat BERISIK, bukan disembunyikan.
+        // Kanal yang belum terdaftar melempar; di sini itu bukan galat yang
+        // perlu menggagalkan pengiriman ke kanal lain, jadi cukup dilewati.
+        try {
+            $driver = $this->driver($channel);
+        } catch (\Throwable) {
             return $recipient;
         }
 
-        // User-like object dengan `email` attribute (works for App\Models\User)
-        if (is_object($recipient)) {
-            if ($channel === 'email' && property_exists($recipient, 'email') || isset($recipient->email)) {
-                return $recipient->email ?? null;
-            }
-            // Future: $recipient->whatsapp_number, ->telegram_chat_id
+        if (! $driver->validateRecipient($recipient)) {
+            Log::warning('notification: penerima tidak sesuai kanal — dilewati', [
+                'channel' => $channel,
+                'recipient' => $recipient,
+                'hint' => "Nilai ini bukan format yang dikenali kanal '{$channel}'. "
+                    .'Kirim objek pengguna agar tiap kanal mengambil bidangnya sendiri.',
+            ]);
+
+            return null;
         }
 
-        return null;
+        return $recipient;
     }
 
     /**
@@ -207,6 +259,7 @@ class NotificationService
 
         if ($template) {
             $rendered = $this->renderer->render($template, $channel, $this->data);
+
             return [$rendered, $userId];
         }
 
@@ -230,6 +283,7 @@ class NotificationService
         if (! $class) {
             throw new \InvalidArgumentException("Channel '{$channel}' tidak ter-register di config");
         }
+
         return app($class);
     }
 }
