@@ -121,19 +121,28 @@ class TelegramChannel extends AbstractChannel
     }
 
     /**
-     * Susun pesan, dan JANGAN pernah melampaui batas API.
+     * Susun pesan yang enak dibaca di PONSEL.
      *
-     * Melewati 4096 karakter membuat Telegram menolak SELURUH pesan — jadi
-     * peringatan yang paling panjang, yang biasanya paling penting, justru
-     * yang paling mungkin hilang. Karena itu dipotong di sini, bukan
-     * dipasrahkan ke penyedia.
+     * ⚠️ Badan surel TIDAK dipakai apa adanya. Ia berupa tabel HTML, dan
+     * membuang tag-nya (`strip_tags`) hanya menyisakan kerangkanya: puluhan
+     * baris kosong berindentasi dengan nilai-nilai tercecer di antaranya.
+     * Terbaca sebagai pesan rusak, dan justru yang paling penting — angka
+     * beserta artinya — paling sulit ditemukan.
+     *
+     * Jadi pesannya disusun ulang dari DATA di konteks. Kalau konteksnya tidak
+     * ada (pemanggil di luar alerting), barulah badan surel dipakai setelah
+     * dirapikan seadanya.
+     *
+     * Ringkas dengan sengaja: yang dibutuhkan di ponsel adalah "perlu saya
+     * lihat sekarang?", bukan seluruh buktinya. Rinciannya tetap di dasbor.
      */
     protected function compose(NotificationPayload $payload): string
     {
-        $judul = $payload->subject ? '<b>'.e($payload->subject).'</b>'."\n\n" : '';
-        $isi = strip_tags($payload->body);
+        $ctx = $payload->context;
 
-        $pesan = $judul.e($isi);
+        $pesan = isset($ctx['rule_key'])
+            ? $this->composeFromAlert($payload, $ctx)
+            : $this->composeFallback($payload);
 
         if (mb_strlen($pesan) <= self::MAX_LENGTH) {
             return $pesan;
@@ -142,6 +151,120 @@ class TelegramChannel extends AbstractChannel
         $penanda = "\n\n… (dipotong — buka dasbor untuk selengkapnya)";
 
         return mb_substr($pesan, 0, self::MAX_LENGTH - mb_strlen($penanda)).$penanda;
+    }
+
+    /**
+     * Pesan untuk peringatan, disusun dari data.
+     *
+     * @param  array<string,mixed>  $ctx
+     */
+    protected function composeFromAlert(NotificationPayload $payload, array $ctx): string
+    {
+        $kind = $ctx['kind'] ?? 'fired';
+        $severity = $ctx['severity'] ?? 'warning';
+
+        $ikon = match (true) {
+            $kind === 'resolved' => '✅',
+            $severity === 'critical' => '🔴',
+            $severity === 'info' => 'ℹ️',
+            default => '⚠️',
+        };
+
+        $kepala = match ($kind) {
+            'resolved' => 'PULIH',
+            'renotified' => 'MASIH BERLANGSUNG',
+            default => strtoupper($severity),
+        };
+
+        $baris = [$ikon.' <b>'.e($kepala).'</b>'];
+
+        if ($judul = $ctx['alert']['label'] ?? $ctx['description'] ?? null) {
+            $baris[] = e((string) $judul);
+        }
+
+        $baris[] = '';
+
+        // Nilai yang menjelaskan KENAPA berbunyi. Kunci teknis (id, kode
+        // internal) dilewati — di ponsel ia hanya memenuhi layar.
+        $lewati = ['label', 'telegram_topic', 'alert_state_id'];
+
+        foreach (($ctx['alert'] ?? []) as $k => $v) {
+            if (in_array($k, $lewati, true) || is_array($v) || $v === null || $v === '') {
+                continue;
+            }
+
+            $nilai = (string) $v;
+
+            if (str_ends_with($k, '_gb')) {
+                $nilai .= ' GB';
+            } elseif ($k === 'percent') {
+                $nilai .= '%';
+            }
+
+            $baris[] = '• <b>'.e(self::labelUntuk($k)).':</b> '.e($nilai);
+        }
+
+        $baris[] = '';
+        $baris[] = '<i>'.e((string) ($ctx['rule_key'] ?? '')).'</i>';
+
+        if ($kind === 'renotified' && ! empty($ctx['fire_count'])) {
+            $baris[] = '<i>pemberitahuan ke-'.(int) $ctx['fire_count'].'</i>';
+        }
+
+        return implode("\n", $baris);
+    }
+
+    /**
+     * Nama kolom → kata yang dibaca manusia.
+     *
+     * `sisa_gb` dan `occurrences` masuk akal bagi yang menulis kodenya, tetapi
+     * peringatan ini dibaca di ponsel, sering oleh orang yang tidak menulis
+     * aturannya — dan kadang tengah malam. Nama yang tidak dikenali dibiarkan
+     * apa adanya, sekadar diganti garis bawahnya dengan spasi.
+     */
+    protected static function labelUntuk(string $kunci): string
+    {
+        return [
+            'percent' => 'Terpakai (%)',
+            'sisa_gb' => 'Sisa',
+            'used_gb' => 'Terpakai',
+            'total_gb' => 'Kapasitas',
+            'threshold' => 'Ambang',
+            'delta' => 'Kenaikan',
+            'current' => 'Sekarang',
+            'previous' => 'Sebelumnya',
+            'server' => 'Server',
+            'jenis' => 'Jenis',
+            'ip' => 'IP',
+            'reason' => 'Alasan',
+            'score' => 'Skor',
+            'occurrences' => 'Kejadian',
+            'agent' => 'Agen',
+            'service' => 'Layanan',
+            'action' => 'Aksi',
+            'error_short' => 'Galat',
+            'attempts' => 'Percobaan',
+        ][$kunci] ?? ucfirst(str_replace('_', ' ', $kunci));
+    }
+
+    /**
+     * Untuk pemanggil di luar alerting: rapikan badan surel seadanya.
+     *
+     * Bukan sekadar `strip_tags`: baris kosong beruntun dan indentasi sisa
+     * tata letak HTML ikut dibuang, karena itulah yang membuat pesannya
+     * terlihat rusak.
+     */
+    protected function composeFallback(NotificationPayload $payload): string
+    {
+        $isi = html_entity_decode(strip_tags($payload->body), ENT_QUOTES | ENT_HTML5);
+        $isi = preg_replace('/[ \t]+/', ' ', $isi);
+        $isi = preg_replace('/\n{3,}/', "\n\n", $isi);
+        $isi = implode("\n", array_map('trim', explode("\n", (string) $isi)));
+        $isi = trim(preg_replace('/\n{3,}/', "\n\n", $isi));
+
+        $judul = $payload->subject ? '<b>'.e($payload->subject).'</b>'."\n\n" : '';
+
+        return $judul.e($isi);
     }
 
     /**
