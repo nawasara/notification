@@ -67,6 +67,7 @@ class EmailChannel extends AbstractChannel
     {
         if (! Vault::isConfigured('smtp')) {
             $callback();
+
             return;
         }
 
@@ -130,6 +131,7 @@ class EmailChannel extends AbstractChannel
     {
         if (Vault::isConfigured('smtp')) {
             $r = $this->testFromVault();
+
             return ['ok' => $r['success'] ?? false, 'message' => $r['message'] ?? ''];
         }
 

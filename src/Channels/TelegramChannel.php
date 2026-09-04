@@ -170,10 +170,16 @@ class TelegramChannel extends AbstractChannel
             default => '⚠️',
         };
 
+        // Kepala pesan menyebut APA YANG TERJADI, bukan tingkat gawatnya.
+        //
+        // "CRITICAL" tidak memberi tahu apa pun: pembaca tetap harus membaca
+        // seluruh pesan untuk tahu ini soal serangan, disk penuh, atau agen
+        // mati. Yang dibutuhkan di ponsel adalah satu baris yang sudah
+        // menjawab "ada apa" — tingkat gawatnya sudah tersirat dari ikonnya.
         $kepala = match ($kind) {
             'resolved' => 'PULIH',
             'renotified' => 'MASIH BERLANGSUNG',
-            default => strtoupper($severity),
+            default => $this->judulKejadian($ctx, $severity),
         };
 
         $baris = [$ikon.' <b>'.e($kepala).'</b>'];
@@ -215,6 +221,63 @@ class TelegramChannel extends AbstractChannel
     }
 
     /**
+     * Satu baris yang sudah menjawab "ada apa".
+     *
+     * Diturunkan dari `rule_key`, karena kunci itulah yang benar-benar
+     * menyebut jenis kejadiannya — sedangkan severity hanya menyebut seberapa
+     * gawat, dan "CRITICAL" sendirian tidak membedakan serangan dari disk
+     * penuh.
+     *
+     * Kunci yang belum dikenali jatuh ke deskripsi aturannya, lalu ke severity
+     * sebagai upaya terakhir — supaya aturan baru tetap terbaca meski belum
+     * ditambahkan di sini.
+     *
+     * @param  array<string,mixed>  $ctx
+     */
+    protected function judulKejadian(array $ctx, string $severity): string
+    {
+        $key = (string) ($ctx['rule_key'] ?? '');
+
+        $peta = [
+            'cloudflare.attack.surge' => 'SITUS DISERANG',
+            'cloudflare.ssl.critical' => 'SERTIFIKAT HAMPIR HABIS',
+            'cloudflare.ssl.warning' => 'SERTIFIKAT AKAN HABIS',
+            'secscan.agent.offline' => 'AGEN BERHENTI MELAPOR',
+            'secscan.ip.autoblocked' => 'IP DIBLOKIR OTOMATIS',
+            'secscan.site.compromised' => 'SITUS TERKOMPROMI',
+            'secscan.site.suspicious' => 'SITUS MENCURIGAKAN',
+            'proxmox.vm.disk.critical' => 'DISK HAMPIR PENUH',
+            'proxmox.vm.disk.warning' => 'DISK MULAI PENUH',
+            'proxmox.node.disk.critical' => 'DISK NODE HAMPIR PENUH',
+            'proxmox.node.disk.warning' => 'DISK NODE MULAI PENUH',
+            'proxmox.node.memory.critical' => 'MEMORI NODE HAMPIR HABIS',
+            'proxmox.node.memory.warning' => 'MEMORI NODE TINGGI',
+            'uptime.monitor.down' => 'SITUS MATI',
+            'queue.job.failed' => 'PROSES LATAR GAGAL',
+        ];
+
+        if (isset($peta[$key])) {
+            return $peta[$key];
+        }
+
+        // Kegagalan sinkronisasi bernama per layanan (sync.job.failed.whm),
+        // jadi tidak dapat dicocokkan persis.
+        if (str_starts_with($key, 'sync.job.failed')) {
+            return 'SINKRONISASI GAGAL';
+        }
+
+        if (str_starts_with($key, 'db.server.')) {
+            return 'BASIS DATA BERMASALAH';
+        }
+
+        $deskripsi = $ctx['description'] ?? null;
+
+        return is_string($deskripsi) && $deskripsi !== ''
+            ? mb_strtoupper($deskripsi)
+            : mb_strtoupper($severity);
+    }
+
+    /**
      * Nama kolom → kata yang dibaca manusia.
      *
      * `sisa_gb` dan `occurrences` masuk akal bagi yang menulis kodenya, tetapi
@@ -241,6 +304,17 @@ class TelegramChannel extends AbstractChannel
             'occurrences' => 'Kejadian',
             'agent' => 'Agen',
             'service' => 'Layanan',
+
+            // Deteksi serangan. `bermusuhan` sengaja tidak ditampilkan sebagai
+            // kata itu — di ponsel ia terbaca seperti istilah teknis; yang
+            // dicari pembaca adalah "berapa banyak yang ditahan".
+            'bermusuhan' => 'Total ditahan',
+            'diblokir' => 'Diblokir',
+            'ditantang' => 'Diminta verifikasi',
+            'biasanya' => 'Normalnya',
+            'lonjakan' => 'Kenaikan',
+            'negara_terbanyak' => 'Asal terbanyak',
+            'jendela' => 'Rentang waktu',
             'action' => 'Aksi',
             'error_short' => 'Galat',
             'attempts' => 'Percobaan',

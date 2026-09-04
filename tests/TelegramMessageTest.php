@@ -101,4 +101,68 @@ class TelegramMessageTest extends TestCase
         $this->assertStringContainsString('Halo', $pesan);
         $this->assertStringNotContainsString("\n\n\n", $pesan);
     }
+
+    /**
+     * Baris pertama harus menyebut APA YANG TERJADI.
+     *
+     * Sebelumnya berbunyi "CRITICAL" — itu menyebut seberapa gawat, bukan
+     * kejadiannya. Pembaca tetap harus membaca seluruh pesan untuk tahu ini
+     * soal serangan, disk penuh, atau agen mati. Di ponsel, saat sedang
+     * terjadi sesuatu, baris pertama itulah yang paling menentukan.
+     */
+    public function test_baris_pertama_menyebut_kejadian_bukan_tingkat_gawat(): void
+    {
+        $pesan = $this->susun([
+            'rule_key' => 'cloudflare.attack.surge',
+            'kind' => 'fired',
+            'severity' => 'critical',
+            'alert' => ['label' => 'perdagkum.ponorogo.go.id'],
+        ]);
+
+        $this->assertStringContainsString('SITUS DISERANG', $pesan);
+        $this->assertStringNotContainsString('CRITICAL', $pesan);
+    }
+
+    /** Tiap jenis kejadian punya sebutannya sendiri. */
+    public function test_tiap_jenis_kejadian_punya_sebutan(): void
+    {
+        $judul = fn (string $key) => $this->susun([
+            'rule_key' => $key, 'kind' => 'fired', 'severity' => 'critical',
+            'alert' => ['label' => 'x'],
+        ]);
+
+        $this->assertStringContainsString('AGEN BERHENTI MELAPOR', $judul('secscan.agent.offline'));
+        $this->assertStringContainsString('DISK HAMPIR PENUH', $judul('proxmox.vm.disk.critical'));
+        $this->assertStringContainsString('SITUS MATI', $judul('uptime.monitor.down'));
+        $this->assertStringContainsString('PROSES LATAR GAGAL', $judul('queue.job.failed'));
+    }
+
+    /**
+     * Sinkronisasi bernama per layanan, jadi tidak dapat dicocokkan persis.
+     */
+    public function test_sinkronisasi_dikenali_lewat_awalan(): void
+    {
+        $pesan = $this->susun([
+            'rule_key' => 'sync.job.failed.keycloak', 'kind' => 'fired',
+            'severity' => 'warning', 'alert' => ['label' => 'keycloak'],
+        ]);
+
+        $this->assertStringContainsString('SINKRONISASI GAGAL', $pesan);
+    }
+
+    /**
+     * Aturan yang belum dikenali tidak boleh kehilangan judulnya.
+     *
+     * Jatuh ke deskripsi aturan, supaya aturan baru tetap terbaca meski belum
+     * ditambahkan ke peta.
+     */
+    public function test_aturan_asing_jatuh_ke_deskripsinya(): void
+    {
+        $pesan = $this->susun([
+            'rule_key' => 'sesuatu.yang.baru', 'kind' => 'fired', 'severity' => 'warning',
+            'description' => 'Antrean menumpuk', 'alert' => ['label' => 'x'],
+        ]);
+
+        $this->assertStringContainsString('ANTREAN MENUMPUK', $pesan);
+    }
 }
