@@ -211,7 +211,24 @@ class TelegramChannel extends AbstractChannel
         }
 
         $baris[] = '';
-        $baris[] = '<i>'.e((string) ($ctx['rule_key'] ?? '')).'</i>';
+
+        // Tautan dasbor, BUKAN `rule_key`.
+        //
+        // Kunci aturan seperti `cloudflare.attack.surge` adalah penanda
+        // internal: ia tidak berarti apa pun bagi yang membaca di ponsel, dan
+        // menempatkannya di akhir pesan hanya membuat baris terakhir terlihat
+        // seperti galat. Yang berguna di situ adalah cara MELIHAT lebih
+        // lanjut.
+        // function_exists: kelas ini juga diuji tanpa container Laravel, dan
+        // memanggil config() di sana melempar "Target class [config] does not
+        // exist" — menggagalkan uji yang sama sekali tidak menyoal tautan.
+        $dasbor = function_exists('config') && app()->bound('config')
+            ? rtrim((string) config('app.url'), '/')
+            : '';
+
+        if ($dasbor !== '') {
+            $baris[] = $dasbor.'/alerting/states';
+        }
 
         if ($kind === 'renotified' && ! empty($ctx['fire_count'])) {
             $baris[] = '<i>pemberitahuan ke-'.(int) $ctx['fire_count'].'</i>';
@@ -308,13 +325,18 @@ class TelegramChannel extends AbstractChannel
             // Deteksi serangan. `bermusuhan` sengaja tidak ditampilkan sebagai
             // kata itu — di ponsel ia terbaca seperti istilah teknis; yang
             // dicari pembaca adalah "berapa banyak yang ditahan".
-            'bermusuhan' => 'Total ditahan',
-            'diblokir' => 'Diblokir',
-            'ditantang' => 'Diminta verifikasi',
-            'biasanya' => 'Normalnya',
+            // Istilah Cloudflare dipakai apa adanya — itu yang tertulis di
+            // dasbor CF, sehingga angkanya dapat dicocokkan langsung ke sana.
+            // Terjemahan bikinan justru memutus kaitan itu.
+            'mitigated' => 'Mitigated (ditahan)',
+            'blocked' => 'Blocked (ditolak)',
+            'managed_challenge' => 'Managed Challenge',
+            'baseline' => 'Baseline (biasanya)',
             'lonjakan' => 'Kenaikan',
-            'negara_terbanyak' => 'Asal terbanyak',
-            'jendela' => 'Rentang waktu',
+            'top_country' => 'Top country',
+            'window' => 'Rentang',
+            'diam_selama' => 'Sudah diam',
+            'perintah_tertahan' => 'Perintah blokir tertahan',
             'action' => 'Aksi',
             'error_short' => 'Galat',
             'attempts' => 'Percobaan',
