@@ -46,6 +46,9 @@
             "aliases": {
                 "Notify": "Nawasara\\Notification\\Facades\\Notify"
             }
+        },
+        "branch-alias": {
+            "dev-main": "0.2.x-dev"
         }
     },
     "minimum-stability": "dev",
