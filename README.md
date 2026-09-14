@@ -4,15 +4,15 @@ Unified outbound notification for the Nawasara superapp framework. Build a Blade
 
 ## Features
 
-- **`Notify` facade** — fluent, chainable: `Notify::to($user)->template('ssl.expiry')->data([...])->send()`
-- **Email channel (MVP)** — sends via Laravel's Mail facade. Credentials read from the `smtp` Vault group with a fallback to `.env` (`MAIL_*`)
-- **Template manager** — Blade-rendered subject and body, multi-channel bodies (HTML / text / WhatsApp / Telegram / in-app), priority and active flag
-- **Live preview** — render any template against arbitrary JSON variables in an iframe before saving
-- **Test send** — kick off a real send to your own email from the template list to verify rendering and delivery end-to-end
-- **Audit log** — every send is one row in `nawasara_notification_logs` with status (queued / sending / sent / delivered / failed / bounced), error trace, attempts, and rendered body
-- **Retry from UI** — failed and bounced logs can be re-dispatched in one click
-- **Telegram channel** — posts to a group, split by **forum topic** (`message_thread_id`). Credentials and topic ids live in the `telegram` Vault group. Alerts route by severity first: `critical` gets its own topic, because in an inbox 4 critical alerts look exactly like the 405 warnings around them
-- **Future channels** — WhatsApp and in-app are stubbed in the schema and contract
+- **`Notify` facade**: fluent, chainable: `Notify::to($user)->template('ssl.expiry')->data([...])->send()`
+- **Email channel (MVP)**: sends via Laravel's Mail facade. Credentials read from the `smtp` Vault group with a fallback to `.env` (`MAIL_*`)
+- **Template manager**: Blade-rendered subject and body, multi-channel bodies (HTML / text / WhatsApp / Telegram / in-app), priority and active flag
+- **Live preview**: render any template against arbitrary JSON variables in an iframe before saving
+- **Test send**: kick off a real send to your own email from the template list to verify rendering and delivery end-to-end
+- **Audit log**: every send is one row in `nawasara_notification_logs` with status (queued / sending / sent / delivered / failed / bounced), error trace, attempts, and rendered body
+- **Retry from UI**: failed and bounced logs can be re-dispatched in one click
+- **Telegram channel**: posts to a group, split by **forum topic** (`message_thread_id`). Credentials and topic ids live in the `telegram` Vault group. Alerts route by severity first: `critical` gets its own topic, because in an inbox 4 critical alerts look exactly like the 405 warnings around them
+- **Future channels**: WhatsApp and in-app are stubbed in the schema and contract
 
 ## Installation
 
@@ -26,7 +26,7 @@ Auto-discovered. The `Notify` facade is registered as an alias.
 
 ## SMTP credentials
 
-The package reads SMTP credentials from the **`smtp` Vault group** at send time. Open `/nawasara-vault/credentials` → SMTP Email → fill in:
+The package reads SMTP credentials from the **`smtp` Vault group** at send time. Open `/nawasara-vault/credentials`, choose SMTP Email, then fill in:
 
 | Field | Example |
 |-------|---------|
@@ -38,7 +38,7 @@ The package reads SMTP credentials from the **`smtp` Vault group** at send time.
 | From Address | `noreply@kominfo.go.id` |
 | From Name | `Nawasara Kominfo` |
 
-Use **Test Connection** in the dropdown to verify the host is reachable. If Vault is empty, the channel falls back to whatever Laravel resolves from `.env` — useful in `local` where `MAIL_MAILER=log` writes the rendered email to `storage/logs/laravel.log`.
+Use **Test Connection** in the dropdown to verify the host is reachable. If Vault is empty, the channel falls back to whatever Laravel resolves from `.env`, which is handy in `local` where `MAIL_MAILER=log` writes the rendered email to `storage/logs/laravel.log`.
 
 ## Recipients are resolved per channel
 
@@ -47,11 +47,11 @@ email, `telegram_chat_id` for telegram. **Pass the user object**, not a string,
 and every enabled channel finds its own address.
 
 A string that does not match the channel's format is **rejected and logged**,
-not passed through. This matters more than it looks: before it was enforced,
-any string went to any channel, so turning on a new channel would quietly send
-e-mail addresses to Telegram as "chat ids" — failing at the provider, landing
-in a log nobody reads. A channel that silently sends nothing is far worse than
-one that plainly refuses, because everything appears to be working.
+not passed through. Before this was enforced, any string went to any channel, so
+turning on a new channel would quietly send email addresses to Telegram as "chat
+ids", failing at the provider and landing in a log nobody reads. A channel that
+silently sends nothing is worse than one that plainly refuses, because
+everything appears to be working.
 
 ## Sending notifications
 
