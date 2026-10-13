@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Nawasara\Notification\Exceptions\PermanentNotificationFailure;
 use Nawasara\Notification\Models\NotificationLog;
 use Nawasara\Notification\Services\NotificationPayload;
 use Nawasara\Notification\Services\NotificationService;
@@ -73,6 +74,13 @@ class SendNotificationJob implements ShouldQueue
             $providerId = $driver->send($payload);
 
             $log->markSent($providerId);
+        } catch (PermanentNotificationFailure $e) {
+            // Tidak akan pernah berhasil (mis. token push yang sudah mati).
+            // Dicatat gagal lalu berhenti: mengulang tiga kali hanya menambah
+            // panggilan ke penyedia yang pasti ditolak.
+            $log->markFailed($e->getMessage());
+
+            return;
         } catch (\Throwable $e) {
             $log->markFailed($e->getMessage());
 

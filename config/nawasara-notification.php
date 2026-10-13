@@ -43,6 +43,9 @@ return [
     'channels' => [
         'email' => \Nawasara\Notification\Channels\EmailChannel::class,
         'telegram' => \Nawasara\Notification\Channels\TelegramChannel::class,
+        // Push ke aplikasi warga. Penerimanya token perangkat, satu per baris
+        // log; kredensial di Vault grup `fcm`.
+        'fcm' => \Nawasara\Notification\Channels\FcmChannel::class,
     ],
 
     /*

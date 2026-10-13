@@ -53,6 +53,27 @@ ids", failing at the provider and landing in a log nobody reads. A channel that
 silently sends nothing is worse than one that plainly refuses, because
 everything appears to be working.
 
+## Push (FCM)
+
+Channel `fcm` sends to the Ponorogo Hub app through Firebase Cloud Messaging,
+HTTP v1. Credentials are the Firebase service account JSON in Vault group
+`fcm`; the project id is read from inside it. The OAuth step is a JWT signed
+with openssl and exchanged for an access token, cached ~55 minutes, so there is
+no Google client library to keep up to date.
+
+- **One recipient = one device token.** A citizen with two devices gets two
+  log rows, which is what makes "this device stopped receiving" visible.
+- **Dead tokens are not retried.** UNREGISTERED, SENDER_ID_MISMATCH and an
+  invalid token throw `PermanentNotificationFailure`: the job marks the row
+  failed and stops, instead of three attempts per notification forever.
+  `PushTokenRejected` is dispatched so the token's owner deletes it
+  (nawasara/citizen listens).
+- An INVALID_ARGUMENT that blames our payload rather than the token is still
+  permanent, but does **not** delete the device. Deleting a citizen's phone for
+  our own bug would silently end their notifications.
+- Context `push_data` becomes the FCM `data` map (all values cast to string, or
+  FCM rejects the message); `push_channel` sets the Android channel id.
+
 ## Sending notifications
 
 ### Template-driven
