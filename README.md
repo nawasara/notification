@@ -97,6 +97,8 @@ Notify::to('admin@kominfo.go.id')
     ->send();
 ```
 
+**Since v0.2.6, ad-hoc subject and body are sent verbatim, never compiled as Blade.** Before that they went through `Blade::render()`, and ad-hoc bodies often carry outside text (a hacked site's name in a secscan alert, a citizen's report title, a Zoom meeting topic). Blade executes `{{ ... }}` and `@php`, and `e()` does not neutralise either, so such text could run code on the server. Escape outside values with `e()` (that stops HTML injection) and build the string in PHP. Only stored templates, written by admins, are rendered with Blade, and their data arrives as variables.
+
 ### Synchronous (skip queue)
 
 Useful for tests and admin actions that need immediate feedback:

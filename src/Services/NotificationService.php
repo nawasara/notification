@@ -263,14 +263,26 @@ class NotificationService
             return [$rendered, $userId];
         }
 
-        // Ad-hoc — pakai subject/body langsung
+        // Ad-hoc: subjek dan badan dipakai APA ADANYA, tidak pernah dikompilasi.
+        //
+        // ⚠️ Dulu keduanya dilewatkan ke renderString(), yaitu Blade::render().
+        // Badan ad-hoc disusun pemanggil dan sering memuat teks dari LUAR:
+        // nama situs WordPress yang diretas (peringatan secscan), judul
+        // laporan warga, topik rapat Zoom. Blade mengeksekusi `{{ ... }}` dan
+        // `@php`, dan e() tidak meng-escape keduanya: peretas yang mengganti
+        // nama situsnya menjadi `{{ system(chr(105).chr(100)) }}` menjalankan
+        // perintah di server ini saat peringatannya dikirim. Ditemukan 14
+        // Oktober 2026.
+        //
+        // Yang boleh memakai Blade hanya template tersimpan (template()),
+        // yang ditulis admin, dengan data masuk sebagai VARIABEL.
         if (! $this->body) {
             throw new \InvalidArgumentException('Either template() or body() must be set');
         }
 
         return [[
-            'subject' => $this->subject ? $this->renderer->renderString($this->subject, $this->data) : null,
-            'body' => $this->renderer->renderString($this->body, $this->data),
+            'subject' => $this->subject,
+            'body' => $this->body,
         ], $userId];
     }
 
