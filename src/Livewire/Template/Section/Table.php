@@ -7,6 +7,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Nawasara\AuthPrimitives\Attributes\RequiresSudo;
+use Nawasara\AuthPrimitives\Traits\WithSudo;
 use Nawasara\Notification\Facades\Notify;
 use Nawasara\Notification\Models\NotificationTemplate;
 use Nawasara\Notification\Services\TemplateRenderer;
@@ -18,6 +20,7 @@ class Table extends Component
     use HasBrowserToast;
     use HasExport;
     use WithPagination;
+    use WithSudo;
 
     public string $search = '';
 
@@ -117,6 +120,14 @@ class Table extends Component
         $this->dispatch('modal-open:notification-template-form');
     }
 
+    /**
+     * Audit keamanan 15 Oktober 2026 (S1): template tersimpan dikirim ke
+     * banyak penerima atas nama sistem. Sejak renderer tidak lagi memakai
+     * Blade, menyimpan template tidak dapat menjalankan kode, tetapi isinya
+     * tetap dapat dipakai untuk surel phishing resmi dari Nawasara. Karena
+     * itu penyimpanan digerbang sudo, bukan hanya izin.
+     */
+    #[RequiresSudo(reason: 'menyimpan template notifikasi')]
     public function save(): void
     {
         Gate::authorize($this->editingId ? 'notification.template.update' : 'notification.template.create');
@@ -163,6 +174,8 @@ class Table extends Component
         }
     }
 
+    /** AGENTS.md §6: aksi hapus wajib bersudo (audit 15 Oktober 2026, S6). */
+    #[RequiresSudo(reason: 'menghapus template notifikasi')]
     public function delete(int $id): void
     {
         Gate::authorize('notification.template.delete');
@@ -215,6 +228,11 @@ class Table extends Component
 
     public function renderPreview(): void
     {
+        // Audit keamanan 15 Oktober 2026 (S1): metode publik ini dapat
+        // dipanggil langsung dari browser tanpa lewat openPreview(), jadi
+        // gerbangnya harus di sini juga.
+        Gate::authorize('notification.template.view');
+
         if (! $this->previewId) {
             return;
         }

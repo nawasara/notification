@@ -20,7 +20,7 @@ class AdHocBodyNotCompiledTest extends TestCase
     {
         $renderer = new class extends TemplateRenderer
         {
-            public function renderString(string $template, array $data = []): string
+            public function renderString(string $template, array $data = [], bool $html = true): string
             {
                 throw new \LogicException('Jalur ad-hoc tidak boleh memanggil renderer.');
             }

@@ -154,7 +154,7 @@
                 <x-nawasara-ui::form.label value="Subject" />
                 <x-nawasara-ui::form.input wire:model="formSubject" placeholder="Welcome [user_name]" useError errorVariable="formSubject" />
                 <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
-                    Bisa pakai Blade syntax untuk variable: ketik <code class="font-mono">@{{ $name }}</code> akan di-replace saat render.
+                    Variabel: ketik <code class="font-mono">@{{ $name }}</code>, akan diganti saat render. Bukan Blade: pemanggilan fungsi dan <code class="font-mono">@@php</code> tidak dijalankan.
                 </p>
             </div>
 
@@ -163,7 +163,7 @@
                 <x-nawasara-ui::form.textarea wire:model="formBodyHtml" rows="8"
                     placeholder="<p>Halo [user_name], ...</p>" />
                 <p class="text-xs text-gray-500 dark:text-neutral-400 mt-1">
-                    HTML + Blade syntax. Auto wrap di layout Nawasara.
+                    HTML dengan placeholder <code class="font-mono">@{{ $var }}</code> (di-escape), <code class="font-mono">@{{ $var ?? '-' }}</code>, <code class="font-mono">@{!! $var !!}</code> (mentah), dan <code class="font-mono">@@if ($var) ... @@else ... @@endif</code>. Auto wrap di layout Nawasara.
                 </p>
             </div>
 
@@ -240,7 +240,8 @@
                     <div>
                         <h4 class="font-semibold text-gray-700 dark:text-neutral-300 mb-1">Body (rendered HTML)</h4>
                         <div class="rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
-                            <iframe srcdoc="{{ $previewBody }}" class="w-full h-96 bg-white"></iframe>
+                            {{-- sandbox kosong: tanpa skrip, tanpa origin panel (audit keamanan 15 Oktober 2026, S10) --}}
+                            <iframe sandbox="" srcdoc="{{ $previewBody }}" class="w-full h-96 bg-white"></iframe>
                         </div>
                     </div>
                 @endif

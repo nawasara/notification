@@ -196,7 +196,8 @@
                     <div>
                         <h4 class="font-semibold text-gray-700 dark:text-neutral-300 mb-1">Body (rendered)</h4>
                         <div class="rounded border border-gray-200 dark:border-neutral-700 overflow-hidden">
-                            <iframe srcdoc="{{ $log->body }}" class="w-full h-80 bg-white"></iframe>
+                            {{-- sandbox kosong: tanpa skrip, tanpa origin panel (audit keamanan 15 Oktober 2026, S10) --}}
+                            <iframe sandbox="" srcdoc="{{ $log->body }}" class="w-full h-80 bg-white"></iframe>
                         </div>
                     </div>
                 @endif

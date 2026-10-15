@@ -1,12 +1,12 @@
 # Nawasara Notification
 
-Unified outbound notification for the Nawasara superapp framework. Build a Blade template once, then send it to anyone over any registered channel via a single fluent API. Every send is queued, retried with backoff on failure, and recorded in an audit log.
+Unified outbound notification for the Nawasara superapp framework. Build a template once, then send it to anyone over any registered channel via a single fluent API. Every send is queued, retried with backoff on failure, and recorded in an audit log.
 
 ## Features
 
 - **`Notify` facade**: fluent, chainable: `Notify::to($user)->template('ssl.expiry')->data([...])->send()`
 - **Email channel (MVP)**: sends via Laravel's Mail facade. Credentials read from the `smtp` Vault group with a fallback to `.env` (`MAIL_*`)
-- **Template manager**: Blade-rendered subject and body, multi-channel bodies (HTML / text / WhatsApp / Telegram / in-app), priority and active flag
+- **Template manager**: placeholder-rendered subject and body (never compiled as Blade, see below), multi-channel bodies (HTML / text / WhatsApp / Telegram / in-app), priority and active flag
 - **Live preview**: render any template against arbitrary JSON variables in an iframe before saving
 - **Test send**: kick off a real send to your own email from the template list to verify rendering and delivery end-to-end
 - **Audit log**: every send is one row in `nawasara_notification_logs` with status (queued / sending / sent / delivered / failed / bounced), error trace, attempts, and rendered body
@@ -97,7 +97,9 @@ Notify::to('admin@kominfo.go.id')
     ->send();
 ```
 
-**Since v0.2.6, ad-hoc subject and body are sent verbatim, never compiled as Blade.** Before that they went through `Blade::render()`, and ad-hoc bodies often carry outside text (a hacked site's name in a secscan alert, a citizen's report title, a Zoom meeting topic). Blade executes `{{ ... }}` and `@php`, and `e()` does not neutralise either, so such text could run code on the server. Escape outside values with `e()` (that stops HTML injection) and build the string in PHP. Only stored templates, written by admins, are rendered with Blade, and their data arrives as variables.
+**Since v0.2.6, ad-hoc subject and body are sent verbatim, never compiled as Blade.** Before that they went through `Blade::render()`, and ad-hoc bodies often carry outside text (a hacked site's name in a secscan alert, a citizen's report title, a Zoom meeting topic). Blade executes `{{ ... }}` and `@php`, and `e()` does not neutralise either, so such text could run code on the server. Escape outside values with `e()` (that stops HTML injection) and build the string in PHP. Stored templates are not compiled as Blade either.
+
+**Since the security audit of 15 October 2026 (S1), stored templates are rendered by a safe placeholder renderer, not `Blade::render()`.** Templates are edited in the panel, and the `notification.template.*` permissions can be granted to any role from the UI, so Blade meant PHP execution for whoever held them. The renderer supports `{{ $var }}` (escaped in HTML bodies), `{{ $a->b }}` / `{{ $a.b }}`, `{{ $var ?? 'default' }}`, `{!! $var !!}` (raw), `{{-- comments --}}`, `@{{ literal }}`, and `@if` / `@elseif` / `@else` / `@endif` with simple conditions (`$a`, `! empty($a)`, `isset($a)`, `$a <= 7`). Anything else, including function calls and `@php`, is left as literal text and never executed. The bundled default templates render byte-for-byte as they did under Blade (`tests/DefaultTemplatesRenderSameTest.php`). Saving and deleting a template now requires sudo.
 
 ### Synchronous (skip queue)
 
