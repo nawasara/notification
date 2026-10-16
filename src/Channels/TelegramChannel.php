@@ -263,6 +263,8 @@ class TelegramChannel extends AbstractChannel
             'secscan.ip.autoblocked' => 'IP DIBLOKIR OTOMATIS',
             'secscan.site.compromised' => 'SITUS TERKOMPROMI',
             'secscan.site.suspicious' => 'SITUS MENCURIGAKAN',
+            'secscan.file.spam' => 'BERKAS SPAM DI SITUS',
+            'secscan.file.malicious' => 'WEBSHELL DI SERVER',
             'proxmox.vm.disk.critical' => 'DISK HAMPIR PENUH',
             'proxmox.vm.disk.warning' => 'DISK MULAI PENUH',
             'proxmox.node.disk.critical' => 'DISK NODE HAMPIR PENUH',
@@ -321,6 +323,17 @@ class TelegramChannel extends AbstractChannel
             'occurrences' => 'Kejadian',
             'agent' => 'Agen',
             'service' => 'Layanan',
+
+            // Temuan konten situs (secscan.file.*, secscan.site.*).
+            'site' => 'Situs',
+            'site_name' => 'Situs',
+            'account' => 'Akun',
+            'signature' => 'Jenis',
+            'threat_type' => 'Jenis',
+            'file_count' => 'Jumlah berkas',
+            'sample_file' => 'Contoh berkas',
+            'site_url' => 'Alamat',
+            'source' => 'Sumber',
 
             // Deteksi serangan. `bermusuhan` sengaja tidak ditampilkan sebagai
             // kata itu — di ponsel ia terbaca seperti istilah teknis; yang
