@@ -2,11 +2,14 @@
 
 namespace Nawasara\Notification;
 
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Nawasara\Notification\Console\PruneLogsCommand;
 use Nawasara\Notification\Listeners\AlertOnSyncFailure;
 use Nawasara\Notification\Services\NotificationService;
 use Nawasara\Notification\Services\TemplateRenderer;
@@ -25,6 +28,35 @@ class NotificationServiceProvider extends ServiceProvider
         }
         $this->registerLivewire();
         $this->registerEventListeners();
+        $this->registerPrune();
+    }
+
+    /**
+     * Pembersihan log notifikasi harian (lihat PruneLogsCommand).
+     *
+     * `$schedule->call()` + Artisan, bukan `$schedule->command()` (AGENTS.md
+     * §7); jam dinding Jakarta karena `app.timezone` bernilai UTC.
+     */
+    protected function registerPrune(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            return;
+        }
+
+        $this->commands([PruneLogsCommand::class]);
+
+        $this->app->booted(function () {
+            if (! config('nawasara-notification.prune.enabled', true)) {
+                return;
+            }
+
+            $this->app->make(Schedule::class)
+                ->call(fn () => Artisan::call('nawasara-notification:prune'))
+                ->name('nawasara-notification:prune')
+                ->cron((string) config('nawasara-notification.prune.cron', '40 2 * * *'))
+                ->timezone('Asia/Jakarta')
+                ->withoutOverlapping(60);
+        });
     }
 
     /**

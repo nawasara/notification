@@ -72,4 +72,18 @@ return [
         'template_key' => 'sync.failed',
         'admin_emails' => array_filter(array_map('trim', explode(',', (string) env('NOTIFICATION_SYNC_ALERT_EMAILS', '')))),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pembersihan log notifikasi (nawasara-notification:prune)
+    |--------------------------------------------------------------------------
+    | Badan pesan dikosongkan setelah strip_body_after_days (baris tetap ada),
+    | baris dihapus setelah delete_after_days. 0 = tahap itu dimatikan.
+    */
+    'prune' => [
+        'enabled' => env('NOTIFICATION_PRUNE_ENABLED', true),
+        'cron' => env('NOTIFICATION_PRUNE_CRON', '40 2 * * *'),
+        'strip_body_after_days' => (int) env('NOTIFICATION_PRUNE_STRIP_BODY_DAYS', 30),
+        'delete_after_days' => (int) env('NOTIFICATION_PRUNE_DELETE_DAYS', 180),
+    ],
 ];

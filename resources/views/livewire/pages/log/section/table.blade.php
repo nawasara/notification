@@ -200,6 +200,12 @@
                             <iframe sandbox="" srcdoc="{{ $log->body }}" class="w-full h-80 bg-white"></iframe>
                         </div>
                     </div>
+                @elseif ($log->created_at && $log->created_at->lt(now()->subDays((int) config('nawasara-notification.prune.strip_body_after_days', 30))))
+                    {{-- Isi dikosongkan oleh nawasara-notification:prune. Tanpa
+                         keterangan ini, log lama terlihat seperti pesan kosong. --}}
+                    <p class="text-xs text-gray-500 dark:text-neutral-400">
+                        Isi pesan sudah dihapus otomatis karena lebih dari {{ (int) config('nawasara-notification.prune.strip_body_after_days', 30) }} hari. Penerima, status, dan waktu kirim tetap tersimpan.
+                    </p>
                 @endif
 
                 @if (! empty($log->context))
