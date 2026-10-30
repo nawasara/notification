@@ -113,6 +113,15 @@ class NotificationService
     }
 
     /**
+     * Tandai pesan berisi rahasia (mis. kode OTP): isinya dihapus dari log
+     * begitu pengiriman selesai. Lihat SendNotificationJob::redactIfSensitive.
+     */
+    public function sensitive(): static
+    {
+        return $this->context(['sensitive' => true]);
+    }
+
+    /**
      * Bypass queue, kirim sync — untuk testing atau action urgent.
      */
     public function sync(): static

@@ -109,6 +109,14 @@ Useful for tests and admin actions that need immediate feedback:
 Notify::to($user)->template('welcome')->data([...])->sync()->send();
 ```
 
+### Messages that carry a secret
+
+```php
+Notify::to($email)->channel('email')->subject('Kode OTP')->body($html)->sensitive()->sync()->send();
+```
+
+The body is stored in `nawasara_notification_logs` because the job reads it from there. For a message carrying a one-time code, that means anyone who can open the log can use the code while it is valid. `->sensitive()` replaces the body with a placeholder as soon as delivery finishes, whether it succeeded or failed for good; subject, recipient and status stay for the audit. A redacted message cannot be retried from the log page, since only the placeholder is left.
+
 ## Pages
 
 | Route | Permission |

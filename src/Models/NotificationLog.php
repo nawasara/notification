@@ -32,6 +32,14 @@ class NotificationLog extends Model
     public const STATUS_FAILED = 'failed';
     public const STATUS_BOUNCED = 'bounced';
 
+    /** Isi pengganti untuk pesan ->sensitive() setelah dikirim. */
+    public const REDACTED_BODY = '[isi disembunyikan: pesan berisi kode rahasia]';
+
+    public function isRedacted(): bool
+    {
+        return $this->body === self::REDACTED_BODY;
+    }
+
     public function template()
     {
         return $this->belongsTo(NotificationTemplate::class, 'template_id');

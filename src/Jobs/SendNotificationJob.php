@@ -74,15 +74,23 @@ class SendNotificationJob implements ShouldQueue
             $providerId = $driver->send($payload);
 
             $log->markSent($providerId);
+            $this->redactIfSensitive($log);
         } catch (PermanentNotificationFailure $e) {
             // Tidak akan pernah berhasil (mis. token push yang sudah mati).
             // Dicatat gagal lalu berhenti: mengulang tiga kali hanya menambah
             // panggilan ke penyedia yang pasti ditolak.
             $log->markFailed($e->getMessage());
+            $this->redactIfSensitive($log);
 
             return;
         } catch (\Throwable $e) {
             $log->markFailed($e->getMessage());
+
+            // Dijalankan sinkron (tanpa antrean) = tidak ada percobaan ulang,
+            // jadi ini kesempatan terakhir menghapus isi rahasianya.
+            if ($this->job === null) {
+                $this->redactIfSensitive($log);
+            }
 
             // Re-throw biar Laravel queue retry pakai backoff
             throw $e;
@@ -94,6 +102,26 @@ class SendNotificationJob implements ShouldQueue
         $log = NotificationLog::find($this->logId);
         if ($log) {
             $log->markFailed("Failed after {$log->attempts} attempts: ".$e->getMessage());
+            $this->redactIfSensitive($log);
         }
+    }
+
+    /**
+     * Hapus isi pesan dari log bila pengirim menandainya ->sensitive().
+     *
+     * Isi pesan disimpan di log karena job membacanya dari sana (dan karena
+     * "kirim ulang" butuh isinya). Untuk pesan yang memuat rahasia, seperti
+     * kode OTP reset MFA, menyimpannya berarti siapa pun yang bisa membuka
+     * log dapat memakai kode itu selama masih berlaku. Isinya dihapus begitu
+     * pengiriman selesai, berhasil maupun gagal final; subjek, penerima, dan
+     * status tetap tercatat untuk audit.
+     */
+    protected function redactIfSensitive(NotificationLog $log): void
+    {
+        if (! ($log->context['sensitive'] ?? false)) {
+            return;
+        }
+
+        $log->forceFill(['body' => NotificationLog::REDACTED_BODY])->save();
     }
 }

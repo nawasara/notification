@@ -136,6 +136,13 @@ class Table extends Component
             return;
         }
 
+        // Isinya sudah dihapus karena memuat rahasia; mengirim ulang hanya
+        // akan mengirim teks pengganti ke penerima.
+        if ($log->isRedacted()) {
+            $this->toastError('Pesan ini berisi kode rahasia dan isinya sudah dihapus; tidak bisa dikirim ulang.');
+            return;
+        }
+
         // Reset status + dispatch ulang
         $log->update([
             'status' => NotificationLog::STATUS_QUEUED,
