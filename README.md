@@ -40,6 +40,18 @@ The package reads SMTP credentials from the **`smtp` Vault group** at send time.
 
 Use **Test Connection** in the dropdown to verify the host is reachable. If Vault is empty, the channel falls back to whatever Laravel resolves from `.env`, which is handy in `local` where `MAIL_MAILER=log` writes the rendered email to `storage/logs/laravel.log`.
 
+### A different sender per caller: `smtp_group`
+
+A caller can ask for another SMTP group through the payload context:
+
+```php
+Notify::to($email)->channel('email')->context(['smtp_group' => 'smtp-kisara'])->...->send();
+```
+
+Only groups listed in `EmailChannel::GROUPS` are accepted (`smtp`, `smtp-kisara`), because the context is stored in the notification log and can come from any package; it must not be able to point at another service's credentials. A requested group that is not filled in yet falls back to `smtp`, so mail keeps flowing while the credentials are being set up.
+
+`smtp-kisara` is the sender for Akun Kisara (`nawasara/asn-portal`): `kisara@ponorogo.go.id` on the government mail server, the address the old ASN portal sent from. Civil servants get account mail from Kisara, not from the panel's own sender.
+
 ## Recipients are resolved per channel
 
 `resolveRecipient()` picks the field that matches the channel: `email` for

@@ -12,10 +12,13 @@ use Nawasara\Vault\Facades\Vault;
  * Email channel via Laravel Mail.
  *
  * Credential resolution order:
- *   1. Vault group `smtp` (host + port + encryption + username + password
+ *   1. Vault group pilihan pengirim lewat context `smtp_group` (mis.
+ *      `smtp-kisara`, supaya email Akun Kisara keluar dari kisara@ dan bukan
+ *      dari akun pengirim panel) — kalau grup itu lengkap.
+ *   2. Vault group `smtp` (host + port + encryption + username + password
  *      + from_address + from_name) — kalau ke-set, override mail config
  *      sementara saat send, terus restore ke .env value.
- *   2. Fallback ke .env Laravel (MAIL_MAILER + MAIL_HOST + ...) — pattern
+ *   3. Fallback ke .env Laravel (MAIL_MAILER + MAIL_HOST + ...) — pattern
  *      Laravel default; untuk dev pakai 'log' driver.
  *
  * Pattern konsisten dengan service lain (CF, WHM, Keycloak): semua
@@ -23,6 +26,11 @@ use Nawasara\Vault\Facades\Vault;
  */
 class EmailChannel extends AbstractChannel
 {
+    public const DEFAULT_GROUP = 'smtp';
+
+    /** Grup Vault yang boleh dipilih lewat context `smtp_group`. */
+    public const GROUPS = ['smtp', 'smtp-kisara'];
+
     public function name(): string
     {
         return 'email';
@@ -51,7 +59,7 @@ class EmailChannel extends AbstractChannel
 
         $this->withVaultMailerConfig(function () use ($payload, $mailable) {
             Mail::to($payload->recipient)->send($mailable);
-        });
+        }, $this->groupFor($payload));
 
         // Laravel Mail tidak return provider message-id by default. Bisa di-add
         // via Mailgun/SES headers di future.
@@ -59,13 +67,41 @@ class EmailChannel extends AbstractChannel
     }
 
     /**
-     * Kalau Vault group `smtp` configured, swap mail config sementara
+     * Grup Vault untuk payload ini. Grup pilihan yang belum lengkap jatuh ke
+     * `smtp`, supaya email tetap terkirim selama kredensialnya belum diisi.
+     */
+    public function groupFor(NotificationPayload $payload): string
+    {
+        return self::resolveGroup(
+            $payload->context['smtp_group'] ?? null,
+            fn (string $group) => Vault::isConfigured($group),
+        );
+    }
+
+    /**
+     * Nama grup di luar daftar GROUPS diabaikan: context ikut tersimpan di log
+     * notifikasi dan bisa datang dari paket mana pun, jadi ia tidak boleh
+     * menunjuk grup Vault sembarang (mis. kredensial layanan lain).
+     *
+     * @param  callable(string): bool  $isConfigured
+     */
+    public static function resolveGroup(mixed $requested, callable $isConfigured): string
+    {
+        if (is_string($requested) && in_array($requested, self::GROUPS, true) && $isConfigured($requested)) {
+            return $requested;
+        }
+
+        return self::DEFAULT_GROUP;
+    }
+
+    /**
+     * Kalau Vault group SMTP configured, swap mail config sementara
      * sebelum panggil callback, restore setelah selesai. Ini biar Mail::to(...)
      * pakai SMTP dari Vault, bukan .env.
      */
-    protected function withVaultMailerConfig(callable $callback): void
+    protected function withVaultMailerConfig(callable $callback, string $group = self::DEFAULT_GROUP): void
     {
-        if (! Vault::isConfigured('smtp')) {
+        if (! Vault::isConfigured($group)) {
             $callback();
 
             return;
@@ -78,7 +114,7 @@ class EmailChannel extends AbstractChannel
         ];
 
         try {
-            $vault = $this->vaultCredentials();
+            $vault = $this->vaultCredentials($group);
 
             Config::set('mail.default', 'smtp');
             Config::set('mail.mailers.smtp', [
@@ -114,16 +150,16 @@ class EmailChannel extends AbstractChannel
      *
      * @return array{host:string, port:string, encryption:string, username:string, password:string, from_address:string, from_name:?string}
      */
-    protected function vaultCredentials(): array
+    protected function vaultCredentials(string $group = self::DEFAULT_GROUP): array
     {
         return [
-            'host' => (string) Vault::get('smtp', 'host'),
-            'port' => (string) Vault::get('smtp', 'port'),
-            'encryption' => (string) (Vault::get('smtp', 'encryption') ?: 'tls'),
-            'username' => (string) Vault::get('smtp', 'username'),
-            'password' => (string) Vault::get('smtp', 'password'),
-            'from_address' => (string) Vault::get('smtp', 'from_address'),
-            'from_name' => Vault::get('smtp', 'from_name'),
+            'host' => (string) Vault::get($group, 'host'),
+            'port' => (string) Vault::get($group, 'port'),
+            'encryption' => (string) (Vault::get($group, 'encryption') ?: 'tls'),
+            'username' => (string) Vault::get($group, 'username'),
+            'password' => (string) Vault::get($group, 'password'),
+            'from_address' => (string) Vault::get($group, 'from_address'),
+            'from_name' => Vault::get($group, 'from_name'),
         ];
     }
 
@@ -148,13 +184,13 @@ class EmailChannel extends AbstractChannel
      *
      * Return format mengikuti convention Vault: {'success': bool, 'message': string}
      */
-    public function testFromVault(): array
+    public function testFromVault(string $group = self::DEFAULT_GROUP): array
     {
-        if (! Vault::isConfigured('smtp')) {
+        if (! Vault::isConfigured($group)) {
             return ['success' => false, 'message' => 'Field SMTP belum lengkap di Vault.'];
         }
 
-        $vault = $this->vaultCredentials();
+        $vault = $this->vaultCredentials($group);
 
         try {
             $errno = 0;
@@ -172,5 +208,11 @@ class EmailChannel extends AbstractChannel
         } catch (\Throwable $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /** Tombol Test untuk grup Vault `smtp-kisara`. */
+    public function testKisaraFromVault(): array
+    {
+        return $this->testFromVault('smtp-kisara');
     }
 }
