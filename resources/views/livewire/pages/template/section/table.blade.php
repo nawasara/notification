@@ -55,12 +55,20 @@
 
     <x-nawasara-ui::table
         stickyLast
-        :headers="['Key', 'Name', 'Channels', 'Priority', 'Status', '']">
+        :headers="['Key', 'Name', 'Channels', 'Priority', '']">
         <x-slot:table>
             @forelse ($this->templates as $tpl)
                 <tr>
                     <td class="px-6 py-3 whitespace-nowrap text-sm font-mono text-gray-700 dark:text-neutral-300">
                         {{ $tpl->key }}
+                        {{-- Status di bawah nama, bukan kolom sendiri: terlihat tanpa menggulir ke kanan. --}}
+                        <div class="mt-1">
+                            @if ($tpl->active)
+                                <x-nawasara-ui::badge color="success">Active</x-nawasara-ui::badge>
+                            @else
+                                <x-nawasara-ui::badge color="neutral">Inactive</x-nawasara-ui::badge>
+                            @endif
+                        </div>
                     </td>
                     <td class="px-6 py-3 text-sm text-gray-800 dark:text-neutral-200">
                         <div class="font-medium">{{ $tpl->name }}</div>
@@ -91,13 +99,6 @@
                             {{ ucfirst($tpl->priority) }}
                         </x-nawasara-ui::badge>
                     </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm">
-                        @if ($tpl->active)
-                            <x-nawasara-ui::badge color="success">Active</x-nawasara-ui::badge>
-                        @else
-                            <x-nawasara-ui::badge color="neutral">Inactive</x-nawasara-ui::badge>
-                        @endif
-                    </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm text-right">
                         <x-nawasara-ui::dropdown-menu-action :id="$tpl->id" :items="[
                             ['type' => 'click', 'label' => 'Preview', 'wire:click' => 'openPreview('.$tpl->id.')', 'modal' => 'notification-template-preview', 'icon' => 'lucide-eye', 'permission' => 'notification.template.view'],
@@ -110,7 +111,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6">
+                    <td colspan="5">
                         @if ($search || ! empty($statusFilter) || ! empty($priorityFilter))
                             <x-nawasara-ui::empty-state
                                 icon="lucide-search-x"

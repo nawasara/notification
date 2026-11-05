@@ -80,7 +80,7 @@
     {{-- Sticky last column for the action menu so retry stays reachable. --}}
     <x-nawasara-ui::table
         stickyLast
-        :headers="['Waktu', 'Channel', 'Recipient', 'Template / Subject', 'Status', 'Attempts', '']">
+        :headers="['Waktu', 'Channel', 'Recipient', 'Template / Subject', 'Attempts', '']">
         <x-slot:table>
             @forelse ($this->logs as $log)
                 <tr wire:key="notif-log-{{ $log->id }}">
@@ -92,14 +92,7 @@
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-sm font-mono text-gray-700 dark:text-neutral-300 max-w-xs truncate">
                         {{ $log->recipient }}
-                    </td>
-                    <td class="px-6 py-3 text-sm text-gray-700 dark:text-neutral-300 max-w-md">
-                        @if ($log->template_key)
-                            <div class="font-mono text-xs text-gray-500 dark:text-neutral-400">{{ $log->template_key }}</div>
-                        @endif
-                        <div class="truncate">{{ \Illuminate\Support\Str::limit($log->subject, 80) ?: '(no subject)' }}</div>
-                    </td>
-                    <td class="px-6 py-3 whitespace-nowrap text-sm">
+                        {{-- Status di bawah nama, bukan kolom sendiri: terlihat tanpa menggulir ke kanan. --}}
                         @php
                             // Map notification status to badge color tokens.
                             // queued/sending = blue (in-flight, non-final);
@@ -114,9 +107,17 @@
                                 default => 'neutral',
                             };
                         @endphp
-                        <x-nawasara-ui::badge :color="$statusColor">
-                            {{ ucfirst($log->status) }}
-                        </x-nawasara-ui::badge>
+                        <div class="mt-1">
+                            <x-nawasara-ui::badge :color="$statusColor">
+                                {{ ucfirst($log->status) }}
+                            </x-nawasara-ui::badge>
+                        </div>
+                    </td>
+                    <td class="px-6 py-3 text-sm text-gray-700 dark:text-neutral-300 max-w-md">
+                        @if ($log->template_key)
+                            <div class="font-mono text-xs text-gray-500 dark:text-neutral-400">{{ $log->template_key }}</div>
+                        @endif
+                        <div class="truncate">{{ \Illuminate\Support\Str::limit($log->subject, 80) ?: '(no subject)' }}</div>
                     </td>
                     <td class="px-6 py-3 whitespace-nowrap text-xs text-gray-500 dark:text-neutral-400 font-mono">
                         {{ $log->attempts }}
@@ -132,7 +133,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7">
+                    <td colspan="6">
                         @if ($search || $statusFilter || ! empty($channelFilter) || $window !== '7d' || $from || $to)
                             <x-nawasara-ui::empty-state
                                 icon="lucide-search-x"
